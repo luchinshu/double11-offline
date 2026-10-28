@@ -1,0 +1,5 @@
+demo_output/
+preview*.png
+qr_store.png
+__pycache__/
+.DS_Store

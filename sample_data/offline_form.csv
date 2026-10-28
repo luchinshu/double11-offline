@@ -1,0 +1,6 @@
+提交時間,姓名,Email,電話,消費金額,平台,帳號名稱,發票號碼,行銷同意,門市,來源
+2026/11/01 14:03:22,王小美,mei@example.com,0912-345-678,1280,IG,luchinshu_fan,AB12345678,同意,誠品台茂店,offline-web
+2026/11/02 18:41:05,陳大文,wen@example.com,+886923456789,560,FB,＠Chen_DaWen,CD-87654321,,誠品新竹巨城,offline-web
+2026/11/03 20:15:47,李小華,hua@example.com,0933445566,980,IG,https://www.instagram.com/lihua_sweet/,AB22334455,同意,大江餐車,offline-web
+2026/11/04 13:00:00,張沒留言,nocomment@example.com,0955667788,450,IG,no_comment_user,AB33445566,,誠品台茂店,offline-web
+2026/11/04 19:20:11,劉重複,mei@example.com,0922334455,760,IG,dup_user,AB44556677,,大江餐車,offline-web

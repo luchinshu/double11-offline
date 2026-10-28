@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>盧琴樹 LUCHINSHU｜雙11 門市限定抽獎</title>
+<meta name="description" content="盧琴樹（鷹速國際）雙11 線下門市掃碼抽獎：填資料＋到活動貼文留言就能參加！活動期間 2026/10/30–11/30，抽獎日 2026/12/9。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="brand-head">
+    <div class="moon-wrap" aria-hidden="true">
+      <span class="moon-halo"></span>
+      <span class="moon-disc"></span>
+    </div>
+    <span class="head-note n1" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg></span>
+    <span class="head-note n2" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg></span>
+    <h1 class="logo-zh">盧琴樹</h1>
+    <p class="logo-en">LUCHINSHU</p>
+    <span class="tagline">雙11 門市限定・掃碼抽獎</span>
+    <div class="store-badge" id="storeBadge"></div>
+  </header>
+
+<div class="wrap">
+
+  <section class="card">
+    <ul class="info-list">
+      <li>活動期間：<strong>2026/10/30 – 2026/11/30</strong></li>
+      <li>抽獎日：<strong>2026/12/9</strong>，中獎以 Email 及 FB／IG 私訊通知</li>
+      <li>同一位顧客限參加一次，重複登記僅計一筆</li>
+    </ul>
+  </section>
+
+  <div class="warn-banner" role="alert">
+    <span class="warn-ic" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path fill="currentColor" d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2l2.3 6.7L21 11l-6.7 2.3L12 20l-2.3-6.7L3 11l6.7-2.3z"/></svg>
+    </span>
+    <span class="big">送出後會跳轉到活動貼文，<span class="gold">一定要留言才算參加！</span></span>
+    沒留言不算喔～小編會用留言名單對名單，有填表＋有留言才算數
+  </div>
+
+  <!-- 填寫畫面 -->
+  <section class="card" id="formCard">
+    <h2 class="form-title"><svg class="title-ic" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>抽獎登記</h2>
+    <p class="form-hint">填完送出就會帶你去活動貼文，記得留言！</p>
+
+    <div class="form-error" id="formError"></div>
+
+    <form id="lotteryForm" novalidate>
+      <div class="field">
+        <label class="main" for="fName">姓名 <span class="req">*</span></label>
+        <input type="text" id="fName" name="name" autocomplete="name" placeholder="請填真實姓名，中獎通知用">
+        <div class="field-error" data-err-for="name"></div>
+      </div>
+
+      <div class="field">
+        <label class="main" for="fEmail">Email <span class="req">*</span></label>
+        <input type="email" id="fEmail" name="email" autocomplete="email" placeholder="例：hello@example.com">
+        <div class="field-error" data-err-for="email"></div>
+      </div>
+
+      <div class="field">
+        <label class="main" for="fPhone">電話 <span class="req">*</span></label>
+        <input type="tel" id="fPhone" name="phone" autocomplete="tel" inputmode="tel" placeholder="例：0912345678">
+        <div class="field-error" data-err-for="phone"></div>
+      </div>
+
+      <div class="field">
+        <label class="main" for="fAmount">消費金額（新台幣） <span class="req">*</span></label>
+        <input type="number" id="fAmount" name="amount" inputmode="numeric" min="1" step="1" placeholder="例：1280">
+        <div class="field-error" data-err-for="amount"></div>
+      </div>
+
+      <div class="field">
+        <span class="main" style="display:block;margin-bottom:6px;">FB 或 IG（擇一） <span class="req">*</span></span>
+        <div class="platform-row">
+          <span>
+            <input type="radio" id="pFB" name="platform" value="FB">
+            <label class="pill" for="pFB">Facebook</label>
+          </span>
+          <span>
+            <input type="radio" id="pIG" name="platform" value="IG">
+            <label class="pill" for="pIG">Instagram</label>
+          </span>
+        </div>
+        <div class="field-error" data-err-for="platform"></div>
+      </div>
+
+      <div class="field">
+        <label class="main" for="fAccount">帳號名稱 <span class="req">*</span></label>
+        <input type="text" id="fAccount" name="account" placeholder="例：IG：xxxx_223（中獎會用這個帳號私訊你）">
+        <div class="field-error" data-err-for="account"></div>
+      </div>
+
+      <div class="field">
+        <label class="main" for="fInvoice">發票號碼 <span class="req">*</span></label>
+        <input type="text" id="fInvoice" name="invoice" autocapitalize="characters" placeholder="2 碼英文＋8 碼數字，例：AB12345678">
+        <div class="field-error" data-err-for="invoice"></div>
+      </div>
+
+      <div class="field">
+        <span class="main">個人資料保護聲明（請滑動閱讀全文） <span class="req">*</span></span>
+        <div class="privacy-box" id="privacyBox">
+          <h3>盧琴樹 雙11抽獎活動｜個人資料保護聲明</h3>
+          <p>鷹速國際有限公司（品牌：盧琴樹，統一編號 83551042，以下稱「本公司」）依《個人資料保護法》第 8 條規定，於蒐集您的個人資料前告知下列事項：</p>
+          <p>1. 蒐集者：鷹速國際有限公司（盧琴樹）。</p>
+          <p>2. 蒐集目的：辦理「盧琴樹 雙11抽獎活動」之參加資格確認、抽獎、中獎通知（以 Email 及 FB／IG 私訊方式）、贈品寄送及相關客服聯繫（法定特定目的：〇九〇 消費者、客戶管理與服務；一三五 資（通）訊服務；一五二 廣告或商業行為管理）。經您另行勾選同意後，並用於本公司商品、優惠及活動之行銷訊息寄送（〇四〇 行銷）。</p>
+          <p>3. 個人資料類別：姓名、電子郵件、電話（C001 辨識個人者）、消費金額、購買管道、訂單編號或發票號碼（C093 財務交易）、Facebook 或 Instagram 帳號名稱（C001）。</p>
+          <p>4. 利用期間：自蒐集之日起至 2028/12/31 止；行銷用途至您撤回同意時止。期滿或目的消失後即刪除或停止利用。法令另有保存規定者，從其規定。</p>
+          <p>5. 利用地區：中華民國（台灣）境內。</p>
+          <p>6. 利用對象及方式：由本公司於上述目的範圍內，以電子或書面方式利用，中獎通知以 Email 及 Facebook／Instagram 私訊進行；中獎贈品寄送時，必要範圍內提供予物流業者。除法令規定外，不會提供予其他第三人。</p>
+          <p>7. 您的權利：您可依個資法第 3 條，向本公司請求查詢或閱覽、製給複製本、補充或更正、停止蒐集／處理／利用，或刪除您的個人資料，並可隨時撤回行銷同意。請洽：【聯絡 Email 待填寫：______@______】。</p>
+          <p>8. 不提供之影響：您可自由選擇是否提供個人資料；若不提供或提供不完整，將無法參加本次抽獎或無法完成中獎通知與贈品寄送。是否同意接收行銷訊息不影響抽獎資格。</p>
+          <p>活動說明：活動期間 2026/10/30–2026/11/30，抽獎日 2026/12/9，中獎將以 Email 及 FB／IG 私訊通知。同一位顧客限參加一次，重複登記者僅以一筆計算，本公司保有審核及最終解釋之權利。</p>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="check-row" for="fPrivacy">
+          <input type="checkbox" id="fPrivacy" name="privacyConsent">
+          <span>我已閱讀並同意上方「個人資料保護聲明」，同意盧琴樹為辦理本次抽獎蒐集、處理及利用我的個人資料。<span class="req">*</span></span>
+        </label>
+        <div class="field-error" data-err-for="privacyConsent"></div>
+        <label class="check-row optional" for="fMarketing">
+          <input type="checkbox" id="fMarketing" name="marketing">
+          <span>我同意盧琴樹日後以 Email／電話／簡訊寄送新品、優惠與活動訊息（可隨時取消）。不勾選也能參加抽獎喔！</span>
+        </label>
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="submitBtn">送出，帶我去留言！</button>
+    </form>
+  </section>
+
+  <!-- 成功畫面 -->
+  <section class="card success-wrap" id="successCard">
+    <div class="success-icon" aria-hidden="true"><svg viewBox="0 0 96 96"><circle cx="48" cy="48" r="45" fill="none" stroke="#C6A15B" stroke-opacity=".35"/><circle cx="48" cy="48" r="38" fill="none" stroke="#C6A15B" stroke-opacity=".65" stroke-width="1.5"/><circle cx="45" cy="51" r="21" fill="#E3C892"/><circle cx="54" cy="44" r="18" fill="#ffffff"/><path fill="#5C2331" d="M29 32l1.9 5.3 5.3 1.9-5.3 1.9L29 46.4l-1.9-5.3-5.3-1.9 5.3-1.9z"/><path fill="#C6A15B" d="M70 58l1.6 4.4 4.4 1.6-4.4 1.6L70 70l-1.6-4.4-4.4-1.6 4.4-1.6z"/></svg></div>
+    <h2 class="success-title">登記成功！</h2>
+    <p class="success-text">接下來最重要的一步：<strong>請到活動貼文留言</strong>，有留言才會進入抽獎名單！</p>
+    <p class="success-text">小編是用「FB／IG 帳號」對名單的，留言帳號要和剛剛填的一樣喔。</p>
+    <p class="countdown" id="countdownText">3 秒後自動帶你過去…</p>
+    <a class="btn btn-gold" id="goPostBtn" href="#" target="_blank" rel="noopener">馬上去貼文留言</a>
+    <a class="btn btn-ghost" href="./admin.html">我是店員，前往管理頁</a>
+  </section>
+
+  <footer class="foot">
+    主辦：鷹速國際有限公司（盧琴樹）｜<a href="https://chinshu.co" target="_blank" rel="noopener">chinshu.co</a><br>
+    活動期間 2026/10/30–11/30・抽獎日 2026/12/9・主辦方保有審核及最終解釋之權利
+  </footer>
+</div>
+
+<script src="validate.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

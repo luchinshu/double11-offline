@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>盧琴樹 雙11 抽獎｜名單合併（抽獎日用）</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .file-field { margin-bottom: 14px; }
+  .file-field input[type="file"] {
+    width: 100%; padding: 10px; background: var(--cream);
+    border: 1.5px dashed #d8bf98; border-radius: 12px; font-size: .9rem;
+  }
+  .comment-file-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .comment-file-row select {
+    flex: none; padding: 9px 10px; border-radius: 10px; border: 1.5px solid #dcc9b6;
+    background: #fff; font-family: var(--sans); color: var(--ink);
+  }
+  .comment-file-row input[type="file"] { flex: 1; }
+  .mini-btn {
+    padding: 8px 14px; border-radius: 999px; border: 1.5px solid var(--wine);
+    background: #fff; color: var(--wine); font-weight: 700; cursor: pointer; font-size: .85rem;
+  }
+  .result-box {
+    display: none; margin-top: 16px; padding: 14px 16px; border-radius: 12px;
+    background: var(--cream); border: 1.5px solid var(--gold); font-size: .92rem; line-height: 1.8;
+  }
+  .result-box.on { display: block; }
+  .result-box .num { font-weight: 700; color: var(--wine); }
+  #drawOut {
+    display: none; margin-top: 10px; padding: 12px; background: var(--wine-dark); color: #f5e9d5;
+    border-radius: 10px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .8rem;
+    white-space: pre-wrap; word-break: break-all;
+  }
+  #drawOut.on { display: block; }
+  .draw-row { display: flex; gap: 8px; margin-top: 10px; }
+  .draw-row input { flex: 1; }
+  .draw-row input[type="number"] { flex: 0 0 90px; }
+  .step-title { font-weight: 700; color: var(--wine); margin: 18px 0 8px; font-size: 1rem; }
+  .step-title .n {
+    display: inline-block; width: 24px; height: 24px; line-height: 24px; text-align: center;
+    background: var(--gold); color: var(--wine-dark); border-radius: 50%; margin-right: 6px; font-size: .85rem;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="brand-head">
+    <h1 class="logo-zh">盧琴樹</h1>
+    <p class="logo-en">LUCHINSHU</p>
+    <span class="tagline">雙11 抽獎・名單合併（2026/12/9 抽獎日用）</span>
+  </header>
+
+  <section class="card">
+    <h2 class="form-title">🎰 合併名單三步驟</h2>
+    <p class="form-hint">流程：線下表單 × 留言比對（只留有留言的）→ 合併線上 → 去重 → canonical 名單＋可驗證抽籤。</p>
+
+    <div class="step-title"><span class="n">1</span>線下表單 CSV（門市交回的檔案，可複選多個門市）</div>
+    <div class="file-field"><input type="file" id="formFiles" accept=".csv,text/csv" multiple></div>
+
+    <div class="step-title"><span class="n">2</span>留言名單（FB／IG 各匯出一份，每份選對平台）</div>
+    <div id="commentFiles"></div>
+    <button class="mini-btn" id="addCommentBtn">＋ 加一份留言檔</button>
+
+    <div class="step-title"><span class="n">3</span>線上名單 CSV（選填，Google 表單回覆）</div>
+    <div class="file-field"><input type="file" id="onlineFile" accept=".csv,text/csv"></div>
+
+    <div class="step-title">🏆 抽籤（選填，公開種子讓所有人可驗證）</div>
+    <div class="draw-row">
+      <input type="number" id="drawN" min="1" placeholder="名額">
+      <input type="text" id="drawSeed" placeholder="seed，例：2026-12-09-luchinshu">
+    </div>
+
+    <div class="btn-row" style="display:flex;gap:10px;margin-top:16px;">
+      <button class="btn btn-primary" id="runBtn" style="flex:1">合併並產出名單</button>
+    </div>
+
+    <div class="result-box" id="resultBox"></div>
+    <div id="drawOut"></div>
+
+    <div class="btn-row">
+      <button class="btn btn-gold" id="dlBtn" style="display:none">⬇️ 下載 canonical.csv</button>
+    </div>
+    <p class="admin-note">
+      ※ 全部運算在本機瀏覽器完成，名單不會上傳任何地方。<br>
+      ※ 帳號比對會先去掉 @、大小寫、空白、FB／IG 網址前綴；填 FB 但留言在 IG（或相反）也算有留言。<br>
+      ※ 去重規則：電話（+886 正規化）／Email（小寫）／發票號碼，先出現的優先保留。<br>
+      ※ 抽籤公式與 verify.py 同風格：依 SHA-256("seed|id") 由小到大排序，可用
+      <code>sha256sum</code> 或線上工具驗證每一筆。
+    </p>
+    <a class="btn btn-ghost" href="./index.html">← 回到表單</a>
+  </section>
+
+  <footer class="foot">主辦：鷹速國際有限公司（盧琴樹）｜chinshu.co</footer>
+</div>
+
+<script src="validate.js"></script>
+<script>
+(function () {
+  'use strict';
+  var V = window.LotteryValidate;
+  var CANONICAL_HEADER = ['標準ID', '姓名', 'Email', '電話', '消費金額', '平台', '帳號名稱',
+                          '發票號碼', '行銷同意', '門市', '來源', '比對平台', '提交時間'];
+
+  // ---- 檔案讀取 -----------------------------------------------------------
+  function readFile(file) {
+    return new Promise(function (resolve, reject) {
+      var r = new FileReader();
+      r.onload = function () { resolve(String(r.result)); };
+      r.onerror = reject;
+      r.readAsText(file, 'utf-8');
+    });
+  }
+
+  // 與 merge.py 相同的欄位關鍵字對應
+  function findCol(headers, pats, exclude) {
+    for (var i = 0; i < headers.length; i++) {
+      var hs = String(headers[i] || '').trim().toLowerCase();
+      if (!hs) continue;
+      var hit = pats.some(function (p) { return p.test(hs); });
+      var bad = (exclude || []).some(function (p) { return p.test(hs); });
+      if (hit && !bad) return i;
+    }
+    return -1;
+  }
+
+  function loadFormCsv(text, source) {
+    var rows = V.parseCsv(text);
+    if (!rows.length) return [];
+    var h = rows[0];
+    var cName = findCol(h, [/姓名/, /^name$/]);
+    var cEmail = findCol(h, [/email/, /電子郵件/]);
+    var cPhone = findCol(h, [/電話/, /^phone$/]);
+    var cAmt = findCol(h, [/金額/, /amount/]);
+    var cPlat = findCol(h, [/平台/, /fb 或 ig/, /fb\/ig/], [/名稱/, /帳號/]);
+    var cAcc = findCol(h, [/帳號名稱/, /fb 或 ig 名稱/, /帳號/, /帳戶/, /帳户/, /username/, /account/, /user/, /名稱/], [/訂單/]);
+    var cInv = findCol(h, [/發票/]);
+    var cMkt = findCol(h, [/行銷/]);
+    var cStore = findCol(h, [/門市/, /^store$/]);
+    var cTs = findCol(h, [/提交時間/, /時間戳/, /timestamp/, /^日期$/]);
+    var out = [];
+    rows.slice(1).forEach(function (r) {
+      function g(c) { return c >= 0 && c < r.length ? r[c].trim() : ''; }
+      if (!g(cName) && !g(cAcc)) return;
+      out.push({
+        name: g(cName), email: g(cEmail), phone: g(cPhone), amount: g(cAmt),
+        platform: g(cPlat).toUpperCase().indexOf('FB') >= 0 ? 'FB' : 'IG',
+        account: g(cAcc), invoice: g(cInv), marketing: g(cMkt),
+        store: g(cStore), ts: g(cTs), source: source
+      });
+    });
+    return out;
+  }
+
+  function loadComments(text) {
+    var rows = V.parseCsv(text);
+    if (!rows.length) return [];
+    var header = rows[0];
+    var cAcc = findCol(header, [/帳號/, /帳戶/, /帳户/, /user/, /name/, /account/, /留言/]);
+    var hasHeader = cAcc >= 0 && /帳號|帳戶|帳户|user|name|account|留言/i.test(String(header[cAcc] || '').trim());
+    if (cAcc < 0 && header.length === 1) { cAcc = 0; hasHeader = false; }
+    var body = hasHeader ? rows.slice(1) : rows;
+    var set = {};
+    body.forEach(function (r) {
+      if (cAcc < r.length) {
+        var a = V.normalizeAccount(r[cAcc]);
+        if (a) set[a] = 1;
+      }
+    });
+    return Object.keys(set);
+  }
+
+  // ---- 介面 ---------------------------------------------------------------
+  var commentBox = document.getElementById('commentFiles');
+  function addCommentRow() {
+    var row = document.createElement('div');
+    row.className = 'comment-file-row';
+    row.innerHTML =
+      '<select><option value="auto">自動／兩邊都比</option><option value="FB">FB</option><option value="IG">IG</option></select>' +
+      '<input type="file" accept=".csv,.txt,text/csv,text/plain">' +
+      '<button type="button" class="mini-btn" title="移除">✕</button>';
+    row.querySelector('button').addEventListener('click', function () { row.remove(); });
+    commentBox.appendChild(row);
+  }
+  document.getElementById('addCommentBtn').addEventListener('click', addCommentRow);
+  addCommentRow(); addCommentRow();
+
+  function filesOf(input) { return Array.prototype.slice.call(input.files || []); }
+
+  // 瀏覽器版抽籤：crypto.subtle 是非同步的
+  function asyncSha256(s) {
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)).then(function (buf) {
+      return Array.prototype.map.call(new Uint8Array(buf), function (b) {
+        return ('0' + b.toString(16)).slice(-2);
+      }).join('');
+    });
+  }
+
+  var lastCsv = '';
+  document.getElementById('runBtn').addEventListener('click', function () {
+    var resultBox = document.getElementById('resultBox');
+    var drawOut = document.getElementById('drawOut');
+    var dlBtn = document.getElementById('dlBtn');
+    resultBox.classList.remove('on'); drawOut.classList.remove('on'); dlBtn.style.display = 'none';
+
+    var formFiles = filesOf(document.getElementById('formFiles'));
+    if (!formFiles.length) { alert('請先選線下表單 CSV（步驟 1）'); return; }
+
+    var jobs = [];
+    var form = [], online = [];
+    formFiles.forEach(function (f) {
+      jobs.push(readFile(f).then(function (t) { form = form.concat(loadFormCsv(t, '線下')); }));
+    });
+    var sets = { FB: {}, IG: {} };
+    Array.prototype.forEach.call(commentBox.querySelectorAll('.comment-file-row'), function (row) {
+      var plat = row.querySelector('select').value;
+      var f = row.querySelector('input[type="file"]').files[0];
+      if (!f) return;
+      jobs.push(readFile(f).then(function (t) {
+        var accs = loadComments(t);
+        if (plat === 'auto') {
+          accs.forEach(function (a) { sets.FB[a] = 1; sets.IG[a] = 1; });
+        } else {
+          accs.forEach(function (a) { sets[plat][a] = 1; });
+        }
+      }));
+    });
+    var onlineFile = document.getElementById('onlineFile').files[0];
+    if (onlineFile) jobs.push(readFile(onlineFile).then(function (t) { online = loadFormCsv(t, '線上'); }));
+
+    Promise.all(jobs).then(function () {
+      var match = V.matchOfflineWithComments(form, { FB: Object.keys(sets.FB), IG: Object.keys(sets.IG) });
+      var merged = V.dedupeMerge([{ source: '線下', entries: match.qualified }, { source: '線上', entries: online }]);
+
+      var rows = [CANONICAL_HEADER];
+      merged.merged.forEach(function (e) {
+        rows.push([e.entryId || '', e.name || '', e.email || '', e.phone || '', e.amount || '',
+                   e.platform || '', e.account || '', e.invoice || '', e.marketing || '',
+                   e.store || '', e.source || '', e.matchedPlatform || '', e.ts || '']);
+      });
+      lastCsv = V.toCsv(rows);
+      dlBtn.style.display = 'block';
+
+      resultBox.innerHTML =
+        '線下表單 <span class="num">' + form.length + '</span> 筆 → 有留言 ' +
+        '<span class="num">' + match.qualified.length + '</span> 筆 / 剔除（沒留言）' +
+        '<span class="num">' + match.rejected.length + '</span> 筆<br>' +
+        '合併線上 <span class="num">' + online.length + '</span> 筆 → 去重剔除 ' +
+        '<span class="num">' + merged.dropped.length + '</span> 筆 → 最終名單 ' +
+        '<span class="num">' + merged.merged.length + '</span> 筆';
+      resultBox.classList.add('on');
+
+      var n = parseInt(document.getElementById('drawN').value, 10);
+      var seed = document.getElementById('drawSeed').value.trim();
+      if (n > 0 && seed) {
+        var ids = merged.merged.map(function (e) { return e.entryId; }).sort();
+        Promise.all(ids.map(function (id) { return asyncSha256(seed + '|' + id); }))
+          .then(function (hashes) {
+            var ranked = ids.map(function (id, i) { return { id: id, hash: hashes[i] }; });
+            ranked.sort(function (a, b) { return a.hash < b.hash ? -1 : a.hash > b.hash ? 1 : 0; });
+            return asyncSha256(ids.join('\n')).then(function (listHash) {
+              var lines = ['list_hash ' + listHash];
+              ranked.slice(0, n).forEach(function (r, i) { lines.push((i + 1) + ' ' + r.id + ' ' + r.hash); });
+              drawOut.textContent = lines.join('\n');
+              drawOut.classList.add('on');
+            });
+          });
+      } else if (n > 0 || seed) {
+        alert('抽籤要同時填「名額」和「seed」喔（或不填就跳過抽籤）。');
+      }
+    }).catch(function (err) {
+      alert('讀檔出錯：' + err.message);
+    });
+  });
+
+  document.getElementById('dlBtn').addEventListener('click', function () {
+    var blob = new Blob(['\ufeff' + lastCsv], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'canonical.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+  });
+})();
+</script>
+</body>
+</html>

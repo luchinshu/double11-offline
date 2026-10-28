@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>盧琴樹 雙11 抽獎｜門市管理頁</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .admin-table-wrap { overflow-x: auto; margin-top: 14px; }
+  table.admin { width: 100%; border-collapse: collapse; font-size: .82rem; background: #fff; }
+  table.admin th, table.admin td { border: 1px solid #e6d8c4; padding: 7px 9px; text-align: left; white-space: nowrap; }
+  table.admin th { background: var(--wine); color: var(--cream); position: sticky; top: 0; }
+  table.admin tr:nth-child(even) td { background: #fdfaf3; }
+  .stat { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  .stat .box { flex: 1; min-width: 120px; background: var(--cream); border: 1px solid #e2d3bf; border-radius: 12px; padding: 10px 14px; text-align: center; }
+  .stat .num { font-size: 1.6rem; font-weight: 700; color: var(--wine); }
+  .stat .lbl { font-size: .8rem; color: #7a5c64; }
+  .btn-row { display: flex; gap: 10px; margin-top: 14px; }
+  .btn-row .btn { flex: 1; }
+  .btn-danger { background: #A4231B; color: #fff; box-shadow: 0 4px 12px rgba(164, 35, 27, .3); }
+  .empty-note { text-align: center; color: #93707a; padding: 24px 0 8px; }
+  .admin-note { font-size: .82rem; color: #93707a; margin-top: 12px; line-height: 1.7; }
+</style>
+</head>
+<body>
+  <header class="brand-head">
+    <div class="moon-wrap" aria-hidden="true">
+      <span class="moon-halo"></span>
+      <span class="moon-disc"></span>
+    </div>
+    <span class="head-note n1" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg></span>
+    <h1 class="logo-zh">盧琴樹</h1>
+    <p class="logo-en">LUCHINSHU</p>
+    <span class="tagline">雙11 抽獎・門市管理頁（店員專用）</span>
+  </header>
+
+<div class="wrap">
+  <section class="card">
+    <h2 class="form-title">本機提交紀錄</h2>
+    <p class="form-hint">存在這台裝置的瀏覽器裡，打烊前記得「下載 CSV」交回總部彙整。</p>
+
+    <div class="stat">
+      <div class="box"><div class="num" id="statCount">0</div><div class="lbl">提交筆數</div></div>
+      <div class="box"><div class="num" id="statDup">0</div><div class="lbl">發票重複筆數</div></div>
+    </div>
+
+    <div class="admin-table-wrap" id="tableWrap"></div>
+    <p class="empty-note" id="emptyNote">還沒有資料，客人掃碼送出後就會出現在這裡。</p>
+
+    <div class="btn-row">
+      <button class="btn btn-gold" id="btnCsv">下載 CSV（交回總部）</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-danger" id="btnClear">清除本機資料</button>
+      <a class="btn btn-ghost" style="margin-top:0" href="./index.html">← 回到表單</a>
+    </div>
+
+    <p class="admin-note">
+      ※ 下載的 CSV 為 UTF-8（含 BOM），Excel 直接開不會亂碼。<br>
+      ※ 清除前請先確認已下載；清除只刪這台裝置的留底，不影響已送到試算表的資料。<br>
+      ※ 「發票重複筆數」是以發票號碼粗略比對，正式去重由總部 merge.py 統一處理。
+    </p>
+  </section>
+
+  <footer class="foot">主辦：鷹速國際有限公司（盧琴樹）｜chinshu.co</footer>
+</div>
+
+<script src="validate.js"></script>
+<script>
+(function () {
+  'use strict';
+  var V = window.LotteryValidate;
+  var LS_KEY = 'double11_offline_entries';
+  // 與 Code.gs「線下登記」分頁相同的欄位順序（不含伺服器的重複標記）
+  var HEADERS = ['提交時間', '姓名', 'Email', '電話', '消費金額', '平台', '帳號名稱', '發票號碼', '行銷同意', '門市', '來源'];
+
+  function load() {
+    try {
+      var arr = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+  }
+
+  function fmtTs(iso) {
+    var d = new Date(iso);
+    if (isNaN(d)) return iso;
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return d.getFullYear() + '/' + p(d.getMonth() + 1) + '/' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+  }
+
+  function render() {
+    var entries = load();
+    var wrap = document.getElementById('tableWrap');
+    var empty = document.getElementById('emptyNote');
+    document.getElementById('statCount').textContent = entries.length;
+
+    var seen = {};
+    var dup = 0;
+    entries.forEach(function (e) {
+      var iv = V.normalizeInvoice(e.invoice);
+      if (iv) { if (seen[iv]) dup++; else seen[iv] = 1; }
+    });
+    document.getElementById('statDup').textContent = dup;
+
+    if (!entries.length) { wrap.innerHTML = ''; empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+
+    var html = '<table class="admin"><thead><tr>' + HEADERS.map(function (h) { return '<th>' + h + '</th>'; }).join('') + '</tr></thead><tbody>';
+    entries.slice().reverse().forEach(function (e) {
+      var row = [
+        fmtTs(e.ts), e.name || '', e.email || '', e.phone || '',
+        e.amount != null ? e.amount : '', e.platform || '', e.account || '',
+        e.invoice || '', e.marketing ? '同意' : '', e.store || '', e.source || ''
+      ];
+      html += '<tr>' + row.map(function (c) { return '<td>' + String(c).replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</td>'; }).join('') + '</tr>';
+    });
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+  }
+
+  document.getElementById('btnCsv').addEventListener('click', function () {
+    var entries = load();
+    if (!entries.length) { alert('還沒有資料可以下載喔！'); return; }
+    var rows = [HEADERS];
+    entries.forEach(function (e) {
+      rows.push([
+        fmtTs(e.ts), e.name || '', e.email || '', e.phone || '',
+        e.amount != null ? e.amount : '', e.platform || '', e.account || '',
+        e.invoice || '', e.marketing ? '同意' : '', e.store || '', e.source || ''
+      ]);
+    });
+    var blob = new Blob(['\ufeff' + V.toCsv(rows)], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    var d = new Date();
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    a.download = 'double11_offline_' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+  });
+
+  document.getElementById('btnClear').addEventListener('click', function () {
+    var n = load().length;
+    if (!n) { alert('本來就是空的。'); return; }
+    if (confirm('確定要清除這台裝置上的 ' + n + ' 筆資料嗎？\n請先確認已下載 CSV！')) {
+      localStorage.removeItem(LS_KEY);
+      render();
+      alert('已清除。');
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
