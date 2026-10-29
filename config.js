@@ -17,7 +17,7 @@
  */
 window.LOTTERY_CONFIG = {
   FB_POST_URL: 'https://www.facebook.com/lcspastry/posts/pfbid029PC1KU1XuZk4cNcjRGEgMy14RkiEhHpfmee7R8U92p6eWt82DJ7Z4dTAfsrfEPJMl',
-  IG_POST_URL: '',
+  IG_POST_URL: 'https://www.instagram.com/p/DejNTv3k-PQ/',
   DEFAULT_PLATFORM: 'FB',
   GAS_ENDPOINT: '',
   STORE_NAME: '',
