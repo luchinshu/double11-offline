@@ -16,8 +16,8 @@
  *     &endpoint=https://script.google.com/macros/s/xxxx/exec
  */
 window.LOTTERY_CONFIG = {
-  FB_POST_URL: 'https://example.com/fb-post-placeholder',
-  IG_POST_URL: 'https://example.com/ig-post-placeholder',
+  FB_POST_URL: '',
+  IG_POST_URL: '',
   DEFAULT_PLATFORM: 'IG',
   GAS_ENDPOINT: '',
   STORE_NAME: '',

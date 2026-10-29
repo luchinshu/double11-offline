@@ -93,12 +93,19 @@
     } catch (e) { /* 舊瀏覽器沒 fetch 也沒關係 */ }
   }
 
+  function isRealPostUrl(url) {
+    if (!url || !String(url).trim()) return false;
+    var u = String(url).trim().toLowerCase();
+    if (u.indexOf('example.com') !== -1) return false;
+    if (u.indexOf('placeholder') !== -1) return false;
+    return /^https?:\/\//i.test(u);
+  }
+
   function showSuccess(platform) {
     var url = V.pickPostUrl(cfg, platform);
     formCard.style.display = 'none';
     document.querySelector('.warn-banner').style.display = 'none';
     successCard.classList.add('on');
-    goPostBtn.href = url;
     var followFb = document.getElementById('followFbBtn');
     var followIg = document.getElementById('followIgBtn');
     if (followFb) {
@@ -109,17 +116,28 @@
       followIg.href = cfg.IG_PAGE_URL || 'https://www.instagram.com/luchinshu_/';
       followIg.textContent = '追蹤 ' + (cfg.IG_PAGE_LABEL || 'IG');
     }
-    var sec = 3;
-    countdownText.textContent = sec + ' 秒後自動帶你到貼文…';
-    var timer = setInterval(function () {
-      sec -= 1;
-      if (sec <= 0) {
-        clearInterval(timer);
-        window.location.href = url;   // 同一分頁跳轉，留言最直接
-      } else {
-        countdownText.textContent = sec + ' 秒後自動帶你到貼文…';
-      }
-    }, 1000);
+    if (isRealPostUrl(url)) {
+      goPostBtn.href = url;
+      goPostBtn.style.display = '';
+      goPostBtn.textContent = '馬上去貼文留言';
+      var sec = 3;
+      countdownText.style.display = '';
+      countdownText.textContent = sec + ' 秒後自動帶你到貼文…';
+      var timer = setInterval(function () {
+        sec -= 1;
+        if (sec <= 0) {
+          clearInterval(timer);
+          window.location.href = url;
+        } else {
+          countdownText.textContent = sec + ' 秒後自動帶你到貼文…';
+        }
+      }, 1000);
+    } else {
+      goPostBtn.removeAttribute('href');
+      goPostBtn.style.display = 'none';
+      countdownText.style.display = '';
+      countdownText.textContent = '活動貼文還沒上線，先追蹤粉專／IG，貼文一發就能去留言！';
+    }
   }
 
   form.addEventListener('submit', function (ev) {
