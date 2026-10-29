@@ -19,7 +19,7 @@ window.LOTTERY_CONFIG = {
   FB_POST_URL: 'https://www.facebook.com/lcspastry/posts/pfbid029PC1KU1XuZk4cNcjRGEgMy14RkiEhHpfmee7R8U92p6eWt82DJ7Z4dTAfsrfEPJMl',
   IG_POST_URL: 'https://www.instagram.com/p/DejNTv3k-PQ/',
   DEFAULT_PLATFORM: 'FB',
-  GAS_ENDPOINT: '',
+  GAS_ENDPOINT: 'https://script.google.com/macros/s/AKfycbyNoTQRqz8wvZPSrRbEp6DwQsuL78DQ0LvFkWqZYcSlZpDxd1WJ-cMH5Gb5RgB-fnm56A/exec',
   STORE_NAME: '',
   FB_PAGE_URL: 'https://www.facebook.com/lcspastry',
   IG_PAGE_URL: 'https://www.instagram.com/luchinshu_/',
