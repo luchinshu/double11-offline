@@ -10,6 +10,7 @@
  */
 
 var SHEET_NAME = '線下登記';
+var HARDCODED_SHEET_ID = '1xFeTyFWZh_8bd2GVP0-G28TJBrl1vGrmXHuwI0HWe7M';
 var HEADERS = ['提交時間', '姓名', 'Email', '電話', '消費金額', '平台', '帳號名稱', '發票號碼', '行銷同意', '門市', '來源', '重複標記'];
 
 var INVOICE_RE = /^[A-Za-z]{2}-?[0-9]{8}$/;
@@ -19,8 +20,12 @@ var PHONE_RE = /^[0-9+\-\s()]{8,15}$/;
 // 若用獨立指令碼（未綁定試算表），在「指令碼屬性」設定 SHEET_ID 即可
 function getSpreadsheet_() {
   var props = PropertiesService.getScriptProperties();
-  var id = props.getProperty('SHEET_ID');
-  return id ? SpreadsheetApp.openById(id) : SpreadsheetApp.getActiveSpreadsheet();
+  var id = props.getProperty('SHEET_ID') || '1xFeTyFWZh_8bd2GVP0-G28TJBrl1vGrmXHuwI0HWe7M';
+  try {
+    return SpreadsheetApp.openById(id);
+  } catch (e) {
+    return SpreadsheetApp.getActiveSpreadsheet();
+  }
 }
 
 function doGet() {

@@ -156,6 +156,7 @@
       platform: data.platform,
       account: data.account.trim(),
       invoice: data.invoice.trim(),
+      privacyConsent: true,
       marketing: data.marketing === true,
       store: cfg.STORE_NAME || '',
       source: 'offline-web'
