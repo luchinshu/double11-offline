@@ -16,9 +16,9 @@
  *     &endpoint=https://script.google.com/macros/s/xxxx/exec
  */
 window.LOTTERY_CONFIG = {
-  FB_POST_URL: '',
+  FB_POST_URL: 'https://www.facebook.com/lcspastry/posts/pfbid029PC1KU1XuZk4cNcjRGEgMy14RkiEhHpfmee7R8U92p6eWt82DJ7Z4dTAfsrfEPJMl',
   IG_POST_URL: '',
-  DEFAULT_PLATFORM: 'IG',
+  DEFAULT_PLATFORM: 'FB',
   GAS_ENDPOINT: '',
   STORE_NAME: '',
   FB_PAGE_URL: 'https://www.facebook.com/lcspastry',
