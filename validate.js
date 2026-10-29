@@ -129,7 +129,7 @@
     var cfg = {};
     Object.keys(base || {}).forEach(function (k) { cfg[k] = base[k]; });
     params = params || {};
-    var map = { fb: 'FB_POST_URL', ig: 'IG_POST_URL', store: 'STORE_NAME', endpoint: 'GAS_ENDPOINT' };
+    var map = { fb: 'FB_POST_URL', ig: 'IG_POST_URL', store: 'STORE_NAME', endpoint: 'GAS_ENDPOINT', fbpage: 'FB_PAGE_URL', igpage: 'IG_PAGE_URL' };
     Object.keys(map).forEach(function (pk) {
       var v = params[pk];
       if (typeof v === 'string' && v.trim()) cfg[map[pk]] = v.trim();

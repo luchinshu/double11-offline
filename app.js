@@ -99,6 +99,16 @@
     document.querySelector('.warn-banner').style.display = 'none';
     successCard.classList.add('on');
     goPostBtn.href = url;
+    var followFb = document.getElementById('followFbBtn');
+    var followIg = document.getElementById('followIgBtn');
+    if (followFb) {
+      followFb.href = cfg.FB_PAGE_URL || 'https://www.facebook.com/lcspastry';
+      followFb.textContent = '追蹤 ' + (cfg.FB_PAGE_LABEL || 'FB 粉專');
+    }
+    if (followIg) {
+      followIg.href = cfg.IG_PAGE_URL || 'https://www.instagram.com/luchinshu_/';
+      followIg.textContent = '追蹤 ' + (cfg.IG_PAGE_LABEL || 'IG');
+    }
     var sec = 3;
     countdownText.textContent = sec + ' 秒後自動帶你到貼文…';
     var timer = setInterval(function () {
