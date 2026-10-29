@@ -1,5 +1,6 @@
 /**
- * 盧琴樹 雙11 線下抽獎 — 驗證、正規化、URL 解析、比對合併（純函式，無 DOM 依賴）
+ * 盧琴樹 雙11 抽獎 — 驗證、正規化、URL 解析、比對合併（純函式，無 DOM 依賴）
+ * 線下門市要發票；線上訂單改要購買通路＋訂單編號（不要求發票）。
  * 同時支援瀏覽器（window.LotteryValidate）與 Node（module.exports），供 test.js 測試。
  */
 (function (root, factory) {
@@ -14,6 +15,7 @@
 
   // ---- 正規式（與 Google 表單版一致）------------------------------------
   var INVOICE_RE = /^[A-Za-z]{2}-?[0-9]{8}$/;      // 發票號碼：2 碼英文 + 8 碼數字，可含 dash
+  var ORDER_ID_RE = /^[A-Za-z0-9][A-Za-z0-9\-_]{3,39}$/; // 訂單編號：4–40 碼英數，可含 - _
   var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;   // 夠用的 Email 格式
   var PHONE_RE = /^[0-9+\-\s()]{8,15}$/;           // 電話（台灣手機/市話含 +886）
   var WS_RE = /\s+/g;
@@ -29,6 +31,32 @@
   }
   function normalizeInvoice(v) {
     return trim(v).toUpperCase().replace(/-/g, '');  // AB-12345678 → AB12345678
+  }
+
+  // ---- 訂單編號／購買通路（線上；比對前 trim + 大寫）----------------------
+  function isValidOrderId(v) {
+    var t = trim(v);
+    return ORDER_ID_RE.test(t) && /[0-9]/.test(t);
+  }
+  function normalizeOrderId(v) {
+    return trim(v).toUpperCase();
+  }
+  function canonicalOrderChannel(v) {
+    var t = trim(v);
+    if (t === '官網') return '官網';
+    if (t === '蝦皮') return '蝦皮';
+    if (t.toLowerCase() === 'momo') return 'momo';
+    return '';
+  }
+
+  // '' | 'store' | 'online'。沒選就回空字串，不默默當成門市。
+  function resolveChannel(d) {
+    d = d || {};
+    var c = trim(d.channel != null ? d.channel : d.channelType);
+    var cl = c.toLowerCase();
+    if (cl === 'online' || c === '線上' || c === '線上訂單') return 'online';
+    if (cl === 'store' || cl === 'offline' || c === '門市' || c === '線下' || c === '線下門市') return 'store';
+    return '';
   }
 
   // ---- Email -------------------------------------------------------------
@@ -80,6 +108,11 @@
     var platform = trim(d.platform).toUpperCase();
     var account = trim(d.account);
     var invoice = trim(d.invoice);
+    var channel = resolveChannel(d);
+    var orderId = trim(d.orderId);
+    var orderChannel = canonicalOrderChannel(d.orderChannel);
+
+    if (!channel) errors.channel = '請先選一下是線下門市還是線上訂單喔';
 
     if (!name) errors.name = '請填寫姓名喔';
     else if (name.length > 50) errors.name = '姓名太長了，請確認一下';
@@ -98,8 +131,14 @@
     if (!account) errors.account = '請填寫你的 ' + (platform === 'FB' ? 'FB' : 'FB／IG') + ' 帳號名稱';
     else if (account.length > 100) errors.account = '帳號名稱太長了，請確認一下';
 
-    if (!invoice) errors.invoice = '請填發票號碼，例：AB12345678';
-    else if (!isValidInvoice(invoice)) errors.invoice = '發票號碼格式是 2 碼英文＋8 碼數字，例：AB12345678';
+    if (channel === 'store') {
+      if (!invoice) errors.invoice = '請填發票號碼，例：AB12345678';
+      else if (!isValidInvoice(invoice)) errors.invoice = '發票號碼格式是 2 碼英文＋8 碼數字，例：AB12345678';
+    } else if (channel === 'online') {
+      if (!orderChannel) errors.orderChannel = '請選購買通路：官網、蝦皮或 momo';
+      if (!orderId) errors.orderId = '請填訂單編號，線上訂單不用發票喔';
+      else if (!isValidOrderId(orderId)) errors.orderId = '訂單編號請填訂單頁上的編號（4 碼以上，要有數字）';
+    }
 
     if (d.privacyConsent !== true) errors.privacyConsent = '要勾選同意個資聲明才能參加抽獎喔';
 
@@ -129,7 +168,7 @@
     var cfg = {};
     Object.keys(base || {}).forEach(function (k) { cfg[k] = base[k]; });
     params = params || {};
-    var map = { fb: 'FB_POST_URL', ig: 'IG_POST_URL', store: 'STORE_NAME', endpoint: 'GAS_ENDPOINT', fbpage: 'FB_PAGE_URL', igpage: 'IG_PAGE_URL' };
+    var map = { fb: 'FB_POST_URL', ig: 'IG_POST_URL', store: 'STORE_NAME', endpoint: 'GAS_ENDPOINT', fbpage: 'FB_PAGE_URL', igpage: 'IG_PAGE_URL', channel: 'CHANNEL' };
     Object.keys(map).forEach(function (pk) {
       var v = params[pk];
       if (typeof v === 'string' && v.trim()) cfg[map[pk]] = v.trim();
@@ -226,15 +265,17 @@
     return { qualified: qualified, rejected: rejected };
   }
 
-  // 去重鍵：電話(正規化)／Email(小寫)／發票號碼，任一撞到即視為同一人
+  // 去重鍵：電話／Email／有填的發票／有填的訂單編號。空白發票或空白訂單編號不當成同一人。
   function dedupeKeysOf(e) {
     var keys = [];
     var p = normalizePhone(e.phone != null ? e.phone : e['電話']);
     var em = normalizeEmail(e.email != null ? e.email : e['Email']);
     var iv = normalizeInvoice(e.invoice != null ? e.invoice : e['發票號碼']);
+    var oid = normalizeOrderId(e.orderId != null ? e.orderId : e['訂單編號']);
     if (p) keys.push('電話:' + p);
     if (em) keys.push('Email:' + em);
     if (iv) keys.push('發票:' + iv);
+    if (oid) keys.push('訂單:' + oid);
     return keys;
   }
 
@@ -290,8 +331,13 @@
 
   return {
     INVOICE_RE: INVOICE_RE,
+    ORDER_ID_RE: ORDER_ID_RE,
     isValidInvoice: isValidInvoice,
     normalizeInvoice: normalizeInvoice,
+    isValidOrderId: isValidOrderId,
+    normalizeOrderId: normalizeOrderId,
+    canonicalOrderChannel: canonicalOrderChannel,
+    resolveChannel: resolveChannel,
     isValidEmail: isValidEmail,
     normalizeEmail: normalizeEmail,
     isValidPhone: isValidPhone,

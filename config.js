@@ -8,6 +8,7 @@
  *   ?endpoint=<GAS 網址> 覆蓋 GAS_ENDPOINT（Google Apps Script Web App 網址）
  *   ?fbpage=<粉專網址> 覆蓋 FB_PAGE_URL
  *   ?igpage=<IG 主頁網址> 覆蓋 IG_PAGE_URL
+ *   ?channel=store|online  預選線下門市或線上訂單（沒帶就讓客人自己選）
  *
  * 範例：
  *   https://xxx.github.io/double11-offline/?store=誠品台茂店
@@ -24,5 +25,6 @@ window.LOTTERY_CONFIG = {
   FB_PAGE_URL: 'https://www.facebook.com/lcspastry',
   IG_PAGE_URL: 'https://www.instagram.com/luchinshu_/',
   FB_PAGE_LABEL: '盧琴樹粉專',
-  IG_PAGE_LABEL: 'IG @luchinshu_'
+  IG_PAGE_LABEL: 'IG @luchinshu_',
+  CHANNEL: ''
 };

@@ -373,6 +373,17 @@ body {
 .warn-ic svg + svg { margin-left: 8px; }
 .warn-banner .big { font-size: 1.22rem; display: block; font-family: var(--serif); letter-spacing: .04em; }
 .warn-banner .gold { color: var(--gold-light); text-shadow: 0 0 12px rgba(227, 200, 146, .45); }
+.warn-banner .comment-phrase {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: rgba(251, 246, 238, .1);
+  border: 1px solid rgba(198, 161, 91, .75);
+  color: var(--gold-light);
+  font-family: var(--serif);
+  letter-spacing: .08em;
+}
 
 /* ===== 6. 表單卡 ===== */
 .form-card {
@@ -449,6 +460,18 @@ input.invalid { border-color: var(--danger); background: #fdf3f2; }
 .platform-row input:focus-visible + .pill {
   box-shadow: 0 0 0 3px rgba(198, 161, 91, .45);
 }
+.order-channel-row .pill {
+  letter-spacing: .02em;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+.channel-tip {
+  margin: 8px 0 0;
+  font-size: .86rem;
+  color: #7a5c64;
+  line-height: 1.55;
+}
+.field[hidden] { display: none !important; }
 
 /* 個資全文 */
 .privacy-box {
@@ -572,6 +595,13 @@ button:disabled { cursor: not-allowed; }
 }
 .success-text { font-size: 1rem; margin: 0 0 6px; }
 .success-text strong { color: var(--gold-light); }
+.success-phrase {
+  margin: 8px 0 10px;
+  font-family: var(--serif);
+  font-weight: 700;
+  color: var(--gold-light);
+  letter-spacing: .08em;
+}
 .countdown { color: var(--gold-light); font-weight: 700; margin: 10px 0 18px; }
 .success-wrap .btn-gold { max-width: 320px; margin: 0 auto; }
 
