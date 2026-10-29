@@ -7,55 +7,88 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=20261029h">
 <style>
-  .admin-table-wrap { overflow-x: auto; margin-top: 14px; }
-  table.admin { width: 100%; border-collapse: collapse; font-size: .82rem; background: #fff; }
-  table.admin th, table.admin td { border: 1px solid #e6d8c4; padding: 7px 9px; text-align: left; white-space: nowrap; }
-  table.admin th { background: var(--wine); color: var(--cream); position: sticky; top: 0; }
-  table.admin tr:nth-child(even) td { background: #fdfaf3; }
-  .stat { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
-  .stat .box { flex: 1; min-width: 120px; background: var(--cream); border: 1px solid #e2d3bf; border-radius: 12px; padding: 10px 14px; text-align: center; }
-  .stat .num { font-size: 1.6rem; font-weight: 700; color: var(--wine); }
-  .stat .lbl { font-size: .8rem; color: #7a5c64; }
-  .btn-row { display: flex; gap: 10px; margin-top: 14px; }
-  .btn-row .btn { flex: 1; }
+  .admin-page .card { padding: 22px 18px; }
+  .admin-head { display: flex; flex-direction: column; gap: 4px; }
+  .admin-head .form-title { margin-bottom: 0; }
+  .admin-table-wrap { overflow: auto; margin-top: 16px; border-radius: 14px; border: 1px solid #e6d8c4; background: #fff; max-height: 62vh; }
+  .admin-table-wrap:empty { display: none; }
+  table.admin { width: 100%; border-collapse: separate; border-spacing: 0; font-size: .84rem; }
+  table.admin th, table.admin td { border-bottom: 1px solid #efe4d3; padding: 9px 12px; text-align: left; white-space: nowrap; }
+  table.admin th { background: var(--wine); color: var(--cream); position: sticky; top: 0; z-index: 1; font-weight: 600; letter-spacing: .04em; border-bottom: 2px solid var(--gold); }
+  table.admin tbody tr:nth-child(even) td { background: #fdfaf3; }
+  table.admin tbody tr:hover td { background: #f7ecd9; }
+  table.admin tbody tr:last-child td { border-bottom: none; }
+  .stat { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+  .stat .box { background: linear-gradient(180deg, #fffdf8, var(--cream)); border: 1px solid #e2d3bf; border-top: 3px solid var(--gold); border-radius: 14px; padding: 12px 14px; text-align: center; }
+  .stat .num { font-family: var(--serif); font-size: 1.9rem; font-weight: 700; color: var(--wine); line-height: 1.2; }
+  .stat .lbl { font-size: .8rem; color: #7a5c64; letter-spacing: .06em; }
+  .btn-row { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+  .btn-row .btn { flex: 1 1 160px; margin-top: 0; }
   .btn-danger { background: #A4231B; color: #fff; box-shadow: 0 4px 12px rgba(164, 35, 27, .3); }
-  .empty-note { text-align: center; color: #93707a; padding: 24px 0 8px; }
-  .admin-note { font-size: .82rem; color: #93707a; margin-top: 12px; line-height: 1.7; }
+  .btn-danger:hover { filter: brightness(1.08); }
+  .empty-note { text-align: center; color: #93707a; padding: 28px 12px; margin: 16px 0 0; border: 1.5px dashed #e2d3bf; border-radius: 14px; background: rgba(255,255,255,.5); }
+  .admin-note { font-size: .82rem; color: #93707a; margin: 18px 0 0; line-height: 1.8; padding: 12px 14px; background: rgba(251,246,238,.8); border-left: 3px solid var(--gold); border-radius: 0 10px 10px 0; }
+  .admin-hero { margin: 16px 16px 0; padding: 26px 20px 24px; border-radius: 20px; text-align: center; color: var(--cream);
+    background: radial-gradient(500px 220px at 50% -20%, rgba(198,161,91,.35), transparent 70%), linear-gradient(150deg, #6E2B3B 0%, var(--wine) 45%, var(--wine-dark) 100%);
+    box-shadow: 0 14px 36px rgba(61,23,34,.22), 0 0 0 1px rgba(198,161,91,.4); }
+  .admin-brand { margin: 0; font-family: var(--serif); font-size: 1.05rem; letter-spacing: .3em; color: var(--gold); }
+  .admin-brand span { font-family: var(--sans); font-size: .7rem; letter-spacing: .25em; opacity: .85; margin-left: 6px; }
+  .admin-title { margin: 6px 0 10px; font-family: var(--serif); font-size: 1.5rem; letter-spacing: .08em; }
+  .admin-badge { display: inline-block; padding: 3px 14px; border-radius: 999px; border: 1px solid var(--gold); color: var(--gold); font-size: .78rem; letter-spacing: .2em; }
+  .btn-ghost { display: inline-flex; align-items: center; justify-content: center; background: transparent; color: var(--wine); border: 1.5px solid var(--gold); text-decoration: none; }
+  .btn-ghost:hover { background: rgba(198,161,91,.12); }
+  @media (min-width: 900px) {
+    .admin-hero { margin: 24px 24px 0; padding: 34px 36px 30px; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 24px; text-align: left; }
+    .admin-title { margin: 0; font-size: 1.9rem; }
+    .admin-head, .admin-head .form-title, .admin-head .form-hint { text-align: left; }
+    .admin-page { max-width: 1120px; }
+    .admin-page .wrap { padding: 0 36px 56px; }
+    .admin-page .card { padding: 32px 36px; }
+    .admin-page .card:hover { transform: none; }
+    .admin-top { display: grid; grid-template-columns: 1fr auto; gap: 28px; align-items: end; }
+    .stat { margin-top: 0; grid-template-columns: repeat(2, 160px); }
+    .admin-actions { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-top: 22px; flex-wrap: wrap; }
+    .admin-actions .btn-row { margin-top: 0; flex-wrap: nowrap; }
+    .admin-actions .btn { flex: 0 0 auto; width: auto; padding-left: 26px; padding-right: 26px; }
+    table.admin { font-size: .9rem; }
+    table.admin th, table.admin td { padding: 11px 14px; }
+  }
 </style>
 </head>
 <body>
-  <header class="brand-head">
-    <div class="moon-wrap" aria-hidden="true">
-      <span class="moon-halo"></span>
-      <span class="moon-disc"></span>
-    </div>
-    <span class="head-note n1" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg></span>
-    <h1 class="logo-zh">盧琴樹</h1>
-    <p class="logo-en">LUCHINSHU</p>
-    <span class="tagline">雙11 抽獎・門市管理頁（店員專用）</span>
+<div class="page admin-page">
+  <header class="admin-hero">
+    <p class="admin-brand">盧琴樹 <span>LUCHINSHU</span></p>
+    <h1 class="admin-title">雙11 抽獎・門市管理頁</h1>
+    <span class="admin-badge">店員專用</span>
   </header>
 
 <div class="wrap">
   <section class="card">
-    <h2 class="form-title">本機提交紀錄</h2>
-    <p class="form-hint">存在這台裝置的瀏覽器裡，打烊前記得「下載 CSV」交回總部彙整。</p>
-
-    <div class="stat">
-      <div class="box"><div class="num" id="statCount">0</div><div class="lbl">提交筆數</div></div>
-      <div class="box"><div class="num" id="statDup">0</div><div class="lbl">發票重複筆數</div></div>
+    <div class="admin-top">
+      <div class="admin-head">
+        <h2 class="form-title">本機提交紀錄</h2>
+        <p class="form-hint">存在這台裝置的瀏覽器裡，打烊前記得「下載 CSV」交回總部彙整。</p>
+      </div>
+      <div class="stat">
+        <div class="box"><div class="num" id="statCount">0</div><div class="lbl">提交筆數</div></div>
+        <div class="box"><div class="num" id="statDup">0</div><div class="lbl">發票重複筆數</div></div>
+      </div>
     </div>
 
     <div class="admin-table-wrap" id="tableWrap"></div>
     <p class="empty-note" id="emptyNote">還沒有資料，客人掃碼送出後就會出現在這裡。</p>
 
-    <div class="btn-row">
-      <button class="btn btn-gold" id="btnCsv">下載 CSV（交回總部）</button>
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-danger" id="btnClear">清除本機資料</button>
-      <a class="btn btn-ghost" style="margin-top:0" href="./index.html">← 回到表單</a>
+    <div class="admin-actions">
+      <div class="btn-row">
+        <button class="btn btn-gold" id="btnCsv">下載 CSV（交回總部）</button>
+        <a class="btn btn-ghost" href="./index.html">← 回到表單</a>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-danger" id="btnClear">清除本機資料</button>
+      </div>
     </div>
 
     <p class="admin-note">
@@ -67,8 +100,9 @@
 
   <footer class="foot">主辦：鷹速國際有限公司（盧琴樹）｜chinshu.co</footer>
 </div>
+</div>
 
-<script src="validate.js"></script>
+<script src="validate.js?v=20261029h"></script>
 <script>
 (function () {
   'use strict';
