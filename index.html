@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261029b">
+<link rel="stylesheet" href="style.css?v=20261029c">
 </head>
 <body>
 
@@ -16,7 +16,7 @@
 
   <!-- 1. 海報 hero（手機寬滿版） -->
   <header class="hero">
-    <img src="assets/hero-promo.jpg?v=20261029b" alt="盧琴樹 雙11大獎開抽!! iPhone 18 Pro 等你帶回家，即日起至11/30 消費滿$1111＋留言" class="hero-img">
+    <img src="assets/hero-promo.jpg?v=20261029c" alt="盧琴樹 雙11大獎開抽!! iPhone 18 Pro 等你帶回家，即日起至11/30 消費滿$1111＋留言" class="hero-img">
     <span class="spark sp1" aria-hidden="true"></span>
     <span class="spark sp2" aria-hidden="true"></span>
     <span class="spark sp3" aria-hidden="true"></span>
@@ -54,7 +54,7 @@
 
       <div class="form-error" id="formError"></div>
 
-      <form id="lotteryForm" novalidate>
+      <form id="lotteryForm" class="form-grid" novalidate>
         <div class="field">
           <label class="main" for="fName">姓名 <span class="req">*</span></label>
           <input type="text" id="fName" name="name" autocomplete="name" placeholder="請填真實姓名，中獎通知用">
@@ -100,13 +100,13 @@
           <div class="field-error" data-err-for="account"></div>
         </div>
 
-        <div class="field">
+        <div class="field full">
           <label class="main" for="fInvoice">發票號碼 <span class="req">*</span></label>
           <input type="text" id="fInvoice" name="invoice" autocapitalize="characters" placeholder="2 碼英文＋8 碼數字，例：AB12345678">
           <div class="field-error" data-err-for="invoice"></div>
         </div>
 
-        <div class="field">
+        <div class="field full">
           <span class="main">個人資料保護聲明（請滑動閱讀全文） <span class="req">*</span></span>
           <div class="privacy-box" id="privacyBox">
             <h3>盧琴樹 雙11抽獎活動｜個人資料保護聲明</h3>
@@ -123,7 +123,7 @@
           </div>
         </div>
 
-        <div class="field">
+        <div class="field full">
           <label class="check-row" for="fPrivacy">
             <input type="checkbox" id="fPrivacy" name="privacyConsent">
             <span>我已閱讀並同意上方「個人資料保護聲明」，同意盧琴樹為辦理本次抽獎蒐集、處理及利用我的個人資料。<span class="req">*</span></span>
