@@ -726,3 +726,22 @@ footer.foot a { color: var(--wine); text-decoration: none; border-bottom: 1px so
     box-shadow: 0 6px 16px rgba(61, 23, 34, .18);
   }
 }
+
+.prize-value {
+  margin: 6px 0 0;
+  font-size: .95rem;
+  color: var(--wine);
+  letter-spacing: .02em;
+}
+.prize-value strong {
+  color: #8B1E2D;
+  font-size: 1.15em;
+}
+.prize-grand .prize-value {
+  background: rgba(255,255,255,.55);
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(198,161,91,.65);
+  margin-top: 8px;
+}
