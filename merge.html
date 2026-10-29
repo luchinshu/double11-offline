@@ -84,7 +84,7 @@
     <p class="admin-note">
       ※ 全部運算在本機瀏覽器完成，名單不會上傳任何地方。<br>
       ※ 帳號比對會先去掉 @、大小寫、空白、FB／IG 網址前綴；填 FB 但留言在 IG（或相反）也算有留言。<br>
-      ※ 去重規則：電話（+886 正規化）／Email（小寫）／發票號碼，先出現的優先保留。<br>
+      ※ 去重規則：電話（+886 正規化）／Email（小寫）／發票號碼／訂單編號（有填才比），先出現的優先保留。<br>
       ※ 抽籤公式與 verify.py 同風格：依 SHA-256("seed|id") 由小到大排序，可用
       <code>sha256sum</code> 或線上工具驗證每一筆。
     </p>
@@ -135,6 +135,7 @@
     var cPlat = findCol(h, [/平台/, /fb 或 ig/, /fb\/ig/], [/名稱/, /帳號/]);
     var cAcc = findCol(h, [/帳號名稱/, /fb 或 ig 名稱/, /帳號/, /帳戶/, /帳户/, /username/, /account/, /user/, /名稱/], [/訂單/]);
     var cInv = findCol(h, [/發票/]);
+    var cOrder = findCol(h, [/訂單編號/, /order[\s_]*id/, /^order$/]);
     var cMkt = findCol(h, [/行銷/]);
     var cStore = findCol(h, [/門市/, /^store$/]);
     var cTs = findCol(h, [/提交時間/, /時間戳/, /timestamp/, /^日期$/]);
@@ -145,7 +146,7 @@
       out.push({
         name: g(cName), email: g(cEmail), phone: g(cPhone), amount: g(cAmt),
         platform: g(cPlat).toUpperCase().indexOf('FB') >= 0 ? 'FB' : 'IG',
-        account: g(cAcc), invoice: g(cInv), marketing: g(cMkt),
+        account: g(cAcc), invoice: g(cInv), orderId: g(cOrder), marketing: g(cMkt),
         store: g(cStore), ts: g(cTs), source: source
       });
     });

@@ -61,7 +61,13 @@ console.log('validate.js：表單驗證');
 const GOOD = {
   name: '王小美', email: 'mei@example.com', phone: '0912345678',
   amount: '1280', platform: 'IG', account: 'luchinshu_fan',
-  invoice: 'AB12345678', privacyConsent: true
+  channel: 'store', invoice: 'AB12345678', privacyConsent: true
+};
+const ONLINE = {
+  name: '林小安', email: 'an@example.com', phone: '0988123456',
+  amount: '1111', platform: 'FB', account: 'an_sweet',
+  channel: 'online', orderId: 'sp-241029001', orderChannel: '蝦皮',
+  privacyConsent: true
 };
 t('完整資料通過', () => assert.ok(V.validateForm(GOOD).ok));
 t('缺個資同意不通過', () => {
@@ -77,6 +83,52 @@ t('金額要大于 0 的數字', () => {
   assert.ok(V.validateForm(Object.assign({}, GOOD, { amount: '1,280' })).ok); // 可接受千分位
 });
 
+console.log('validate.js：線下門市 vs 線上訂單');
+t('沒選通路不通過', () => {
+  const r = V.validateForm(Object.assign({}, GOOD, { channel: '' }));
+  assert.ok(!r.ok && r.errors.channel);
+});
+t('線下沒發票不通過', () => {
+  const r = V.validateForm(Object.assign({}, GOOD, { invoice: '' }));
+  assert.ok(!r.ok && r.errors.invoice && !r.errors.orderId);
+});
+t('線下不要求訂單編號', () => {
+  assert.ok(V.validateForm(Object.assign({}, GOOD, { orderId: '', orderChannel: '' })).ok);
+});
+t('線上不需發票，有訂單編號與通路就通過', () => {
+  const r = V.validateForm(ONLINE);
+  assert.ok(r.ok, JSON.stringify(r.errors));
+  assert.ok(V.validateForm(Object.assign({}, ONLINE, { invoice: '' })).ok);
+  assert.ok(V.validateForm(Object.assign({}, ONLINE, { invoice: '不是發票' })).ok);
+});
+t('線上沒訂單編號或不合法不通過', () => {
+  assert.ok(!V.validateForm(Object.assign({}, ONLINE, { orderId: '  ' })).ok);
+  assert.ok(!V.validateForm(Object.assign({}, ONLINE, { orderId: 'ABC' })).ok);       // 太短
+  assert.ok(!V.validateForm(Object.assign({}, ONLINE, { orderId: 'ABCDEF' })).ok);   // 沒有數字
+  const r = V.validateForm(Object.assign({}, ONLINE, { orderId: '' }));
+  assert.ok(r.errors.orderId && !r.errors.invoice);
+});
+t('線上購買通路只接受官網／蝦皮／momo', () => {
+  assert.ok(V.validateForm(Object.assign({}, ONLINE, { orderChannel: '官網' })).ok);
+  assert.ok(V.validateForm(Object.assign({}, ONLINE, { orderChannel: 'momo' })).ok);
+  assert.ok(V.validateForm(Object.assign({}, ONLINE, { orderChannel: 'MOMO' })).ok);
+  assert.strictEqual(V.canonicalOrderChannel('MOMO'), 'momo');
+  assert.ok(!V.validateForm(Object.assign({}, ONLINE, { orderChannel: 'PChome' })).ok);
+  assert.ok(!V.validateForm(Object.assign({}, ONLINE, { orderChannel: '' })).ok);
+});
+t('訂單編號正規化 trim + 大寫', () => {
+  assert.strictEqual(V.normalizeOrderId('  ab-12x '), 'AB-12X');
+  assert.ok(V.isValidOrderId('AB-12'));
+  assert.ok(V.isValidOrderId('2026103000123'));
+  assert.ok(!V.isValidOrderId('ab'));
+});
+t('channel 別名 store／線上', () => {
+  assert.strictEqual(V.resolveChannel({ channel: '線下門市' }), 'store');
+  assert.strictEqual(V.resolveChannel({ channel: '線上訂單' }), 'online');
+  assert.strictEqual(V.resolveChannel({ channelType: '門市' }), 'store');
+  assert.strictEqual(V.resolveChannel({}), '');
+});
+
 console.log('validate.js：URL 參數與設定');
 t('parseQueryString 解析與解碼', () => {
   const q = V.parseQueryString('?fb=https%3A%2F%2Fx.com%2Fa%3Fb%3D1&store=%E8%AA%A0%E5%93%81');
@@ -84,12 +136,13 @@ t('parseQueryString 解析與解碼', () => {
   assert.strictEqual(q.store, '誠品');
 });
 t('resolveConfig 只覆蓋有值的參數', () => {
-  const base = { FB_POST_URL: 'A', IG_POST_URL: 'B', DEFAULT_PLATFORM: 'IG', GAS_ENDPOINT: '', STORE_NAME: '' };
-  const cfg = V.resolveConfig(base, { fb: 'X', store: '台茂', endpoint: ' ' });
+  const base = { FB_POST_URL: 'A', IG_POST_URL: 'B', DEFAULT_PLATFORM: 'IG', GAS_ENDPOINT: '', STORE_NAME: '', CHANNEL: '' };
+  const cfg = V.resolveConfig(base, { fb: 'X', store: '台茂', endpoint: ' ', channel: 'online' });
   assert.strictEqual(cfg.FB_POST_URL, 'X');
   assert.strictEqual(cfg.IG_POST_URL, 'B');       // 沒給就不動
   assert.strictEqual(cfg.STORE_NAME, '台茂');
   assert.strictEqual(cfg.GAS_ENDPOINT, '');       // 空白不覆蓋
+  assert.strictEqual(cfg.CHANNEL, 'online');
 });
 t('pickPostUrl 依平台挑貼文', () => {
   const cfg = { FB_POST_URL: 'F', IG_POST_URL: 'I' };
@@ -143,6 +196,20 @@ t('合併去重：Email 大小寫、電話 886、先出現優先', () => {
   const notes = r.dropped.map(e => e.dedupeNote).join('|');
   assert.ok(notes.indexOf('Email') >= 0 && notes.indexOf('電話') >= 0);
 });
+t('訂單編號去重：trim + 大寫，空白訂單不當成同一筆', () => {
+  const a = { name: '甲', email: 'a@ex.com', phone: '0911000111', platform: 'IG', account: 'a_user', invoice: '', orderId: ' ab12 ' };
+  const b = { name: '乙', email: 'b@ex.com', phone: '0922000222', platform: 'IG', account: 'b_user', invoice: '', orderId: 'AB12' };
+  const c = { name: '丙', email: 'c@ex.com', phone: '0933000333', platform: 'IG', account: 'c_user', invoice: 'XY12345678', orderId: '' };
+  const d = { name: '丁', email: 'd@ex.com', phone: '0944000444', platform: 'IG', account: 'd_user', invoice: '', orderId: '' };
+  const r = V.dedupeMerge([
+    { source: '線上', entries: [a] },
+    { source: '線上', entries: [b, d] },
+    { source: '線下', entries: [c] }
+  ]);
+  assert.strictEqual(r.merged.length, 3);
+  assert.strictEqual(r.dropped.length, 1);
+  assert.ok(r.dropped[0].dedupeNote.indexOf('訂單') >= 0);
+});
 
 console.log('抽籤（verify.py 風格）');
 t('list_hash 與排序與 Python 一致', () => {
@@ -179,6 +246,86 @@ t('--draw 沒給 --seed 要報錯', () => {
       { cwd: __dirname, stdio: ['ignore', 'pipe', 'pipe'] });
   } catch (e) { threw = true; }
   assert.ok(threw);
+});
+
+console.log('Code.gs：伺服器驗證（與表單同一套，不連試算表）');
+const vm = require('vm');
+const gas = {};
+vm.createContext(gas);
+vm.runInContext(fs.readFileSync(path.join(__dirname, 'Code.gs'), 'utf8'), gas);
+const basePerson = {
+  name: '王小美', email: 'mei@example.com', phone: '0912345678',
+  amount: '1280', platform: 'IG', account: 'luchinshu_fan', privacyConsent: true
+};
+function gasErrors(list) { return Array.from(list); }
+t('門市有發票通過；沒發票失敗', () => {
+  const ok = gasErrors(gas.validate_(Object.assign({}, basePerson, { channel: 'store', invoice: 'AB12345678', source: 'offline-web' })));
+  assert.deepStrictEqual(ok, []);
+  const bad = gasErrors(gas.validate_(Object.assign({}, basePerson, { channel: 'store', invoice: '', source: 'offline-web' })));
+  assert.ok(bad.some(e => e.indexOf('發票') >= 0));
+});
+t('線上不需發票；要訂單編號與官網／蝦皮／momo', () => {
+  const ok = gasErrors(gas.validate_(Object.assign({}, basePerson, {
+    channel: 'online', source: 'online-web', invoice: '',
+    orderId: 'sp-241029001', orderChannel: '蝦皮'
+  })));
+  assert.deepStrictEqual(ok, []);
+  ['官網', 'momo', 'MOMO'].forEach(ch => {
+    const r = gasErrors(gas.validate_(Object.assign({}, basePerson, {
+      channel: 'online', orderId: '202610300099', orderChannel: ch
+    })));
+    assert.deepStrictEqual(r, [], ch);
+  });
+  const noInvRequired = gasErrors(gas.validate_(Object.assign({}, basePerson, {
+    channel: 'online', orderId: 'momo99887766', orderChannel: 'momo', invoice: ''
+  })));
+  assert.deepStrictEqual(noInvRequired, []);
+  const missing = gasErrors(gas.validate_(Object.assign({}, basePerson, {
+    channel: 'online', orderId: '', orderChannel: '', invoice: ''
+  })));
+  assert.ok(missing.some(e => e.indexOf('訂單') >= 0));
+  assert.ok(missing.some(e => e.indexOf('通路') >= 0));
+  assert.ok(!missing.some(e => e.indexOf('發票') >= 0));
+});
+t('舊版只送發票、source=offline-web 仍當門市', () => {
+  assert.strictEqual(gas.channelOf_({ invoice: 'AB-12345678', source: 'offline-web' }), 'store');
+  const ok = gasErrors(gas.validate_(Object.assign({}, basePerson, { invoice: 'AB-12345678', source: 'offline-web' })));
+  assert.deepStrictEqual(ok, []);
+});
+t('訂單編號比對用 trim + 大寫', () => {
+  assert.strictEqual(gas.normOrderId_('  ab12 '), 'AB12');
+  assert.strictEqual(gas.canonicalOrderChannel_('MOMO'), 'momo');
+});
+t('寫入列：線上發票留白、門市訂單編號留白，新欄接在舊表頭後面', () => {
+  const old = ['提交時間', '姓名', 'Email', '電話', '消費金額', '平台', '帳號名稱', '發票號碼', '行銷同意', '門市', '來源', '重複標記'];
+  const merged = Array.from(gas.mergeHeaders_(old));
+  assert.strictEqual(merged[7], '發票號碼');
+  assert.strictEqual(merged[11], '重複標記');
+  assert.deepStrictEqual(merged.slice(12), ['通路類型', '購買通路', '訂單編號']);
+  function idxOf(names) {
+    const idx = {};
+    names.forEach((n, i) => { idx[n] = i; });
+    return idx;
+  }
+  const online = Array.from(gas.buildRow_(merged, idxOf(merged), Object.assign({}, basePerson, {
+    channel: 'online', source: 'online-web', invoice: 'AB12345678',
+    orderId: ' sp-99 ', orderChannel: 'MOMO', store: '不該寫入'
+  }), 'online', ''));
+  assert.strictEqual(online[7], '');
+  assert.strictEqual(online[idxOf(merged)['訂單編號']], 'sp-99');
+  assert.strictEqual(online[idxOf(merged)['購買通路']], 'momo');
+  assert.strictEqual(online[idxOf(merged)['通路類型']], '線上');
+  assert.strictEqual(online[idxOf(merged)['來源']], 'online-web');
+  assert.strictEqual(online[idxOf(merged)['門市']], '');
+  const store = Array.from(gas.buildRow_(merged, idxOf(merged), Object.assign({}, basePerson, {
+    channel: 'store', source: 'offline-web', invoice: 'AB12345678',
+    orderId: 'SHOULD-NOT', orderChannel: '蝦皮', store: '誠品台茂店'
+  }), 'store', ''));
+  assert.strictEqual(store[7], 'AB12345678');
+  assert.strictEqual(store[idxOf(merged)['訂單編號']], '');
+  assert.strictEqual(store[idxOf(merged)['購買通路']], '');
+  assert.strictEqual(store[idxOf(merged)['通路類型']], '門市');
+  assert.strictEqual(store[idxOf(merged)['門市']], '誠品台茂店');
 });
 
 console.log(process.exitCode ? '\n有測試失敗' : '\n全部 ' + passed + ' 項測試通過 ✓');

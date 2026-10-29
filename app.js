@@ -1,10 +1,10 @@
-/* 盧琴樹 雙11 線下門市掃碼抽獎 — 表單流程 */
+/* 盧琴樹 雙11 抽獎 — 先選線下門市或線上訂單，再填表 */
 (function () {
   'use strict';
   var V = window.LotteryValidate;
   var LS_KEY = 'double11_offline_entries';
 
-  // config.js 的設定可被網址參數 ?fb= ?ig= ?store= ?endpoint= 覆蓋
+  // config.js 的設定可被網址參數 ?fb= ?ig= ?store= ?endpoint= ?channel= 覆蓋
   var cfg = V.resolveConfig(window.LOTTERY_CONFIG || {}, V.parseQueryString(window.location.search));
 
   var form = document.getElementById('lotteryForm');
@@ -26,14 +26,52 @@
   var defaultP = (cfg.DEFAULT_PLATFORM || 'IG').toUpperCase();
   document.getElementById(defaultP === 'FB' ? 'pFB' : 'pIG').checked = true;
 
+  var invoiceField = document.getElementById('invoiceField');
+  var orderChannelField = document.getElementById('orderChannelField');
+  var orderIdField = document.getElementById('orderIdField');
+  var channelTip = document.getElementById('channelTip');
+
   function fieldValue(id) { return document.getElementById(id).value; }
-  function checkedPlatform() {
-    var el = form.querySelector('input[name="platform"]:checked');
+  function checkedValue(name) {
+    var el = form.querySelector('input[name="' + name + '"]:checked');
     return el ? el.value : '';
   }
+  function checkedPlatform() { return checkedValue('platform'); }
+  function checkedChannel() { return checkedValue('channel'); }
+  function checkedOrderChannel() { return checkedValue('orderChannel'); }
+
+  function syncChannel() {
+    var ch = checkedChannel();
+    if (invoiceField) invoiceField.hidden = ch !== 'store';
+    if (orderChannelField) orderChannelField.hidden = ch !== 'online';
+    if (orderIdField) orderIdField.hidden = ch !== 'online';
+    if (channelTip) {
+      if (ch === 'store') channelTip.textContent = '門市結帳的話，請填下面的發票號碼。';
+      else if (ch === 'online') channelTip.textContent = '線上訂單不用發票，改填購買通路和訂單編號就好。';
+      else channelTip.textContent = '先選一種，下面要填的欄位會跟著換。';
+    }
+    var badge = document.getElementById('storeBadge');
+    if (badge && cfg.STORE_NAME) {
+      if (ch === 'online') badge.classList.remove('on');
+      else badge.classList.add('on');
+    }
+  }
+
+  var preset = V.resolveChannel({ channel: cfg.CHANNEL || '' });
+  if (preset === 'online') document.getElementById('chOnline').checked = true;
+  else if (preset === 'store') document.getElementById('chStore').checked = true;
+  syncChannel();
+
+  form.addEventListener('change', function (ev) {
+    if (ev.target && ev.target.name === 'channel') {
+      clearErrors();
+      syncChannel();
+    }
+  });
 
   function readForm() {
     return {
+      channel: checkedChannel(),
       name: fieldValue('fName'),
       email: fieldValue('fEmail'),
       phone: fieldValue('fPhone'),
@@ -41,6 +79,8 @@
       platform: checkedPlatform(),
       account: fieldValue('fAccount'),
       invoice: fieldValue('fInvoice'),
+      orderId: fieldValue('fOrderId'),
+      orderChannel: checkedOrderChannel(),
       privacyConsent: document.getElementById('fPrivacy').checked === true,
       marketing: document.getElementById('fMarketing').checked === true
     };
@@ -147,6 +187,7 @@
     var result = V.validateForm(data);
     if (!result.ok) { showErrors(result.errors); return; }
 
+    var isOnline = data.channel === 'online';
     var entry = {
       ts: new Date().toISOString(),
       name: data.name.trim(),
@@ -155,11 +196,14 @@
       amount: Number(String(data.amount).replace(/,/g, '')),
       platform: data.platform,
       account: data.account.trim(),
-      invoice: data.invoice.trim(),
+      invoice: isOnline ? '' : data.invoice.trim(),
+      orderId: isOnline ? data.orderId.trim() : '',
+      orderChannel: isOnline ? data.orderChannel : '',
+      channel: isOnline ? 'online' : 'store',
       privacyConsent: true,
       marketing: data.marketing === true,
-      store: cfg.STORE_NAME || '',
-      source: 'offline-web'
+      store: isOnline ? '' : (cfg.STORE_NAME || ''),
+      source: isOnline ? 'online-web' : 'offline-web'
     };
 
     submitBtn.disabled = true;

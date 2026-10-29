@@ -2,7 +2,7 @@
 # 盧琴樹 雙11 線下×線上 抽獎名單合併
 #
 # 流程：線下表單 CSV ×（FB／IG 留言名單）→ 只留「有填表且有留言」→ 合併線上名單
-#       → 以電話（正規化）／Email（小寫）／發票號碼去重 → 輸出 canonical CSV
+#       → 以電話（正規化）／Email（小寫）／發票號碼／訂單編號（有填才比）去重 → 輸出 canonical CSV
 #       → 可選 verify.py 風格抽籤：SHA-256(seed|id) 由小到大排序
 #
 # 用法：
@@ -42,12 +42,17 @@ def norm_email(s):
 def norm_invoice(s):
     return re.sub(r"-", "", str(s or "").strip().upper())
 
+def norm_order_id(s):
+    return str(s or "").strip().upper()
+
 def dedupe_keys(e):
     ks = []
     p, em, iv = norm_phone(e.get("phone")), norm_email(e.get("email")), norm_invoice(e.get("invoice"))
+    oid = norm_order_id(e.get("orderId") or e.get("訂單編號"))
     if p:  ks.append(("電話", p))
     if em: ks.append(("Email", em))
     if iv: ks.append(("發票", iv))
+    if oid: ks.append(("訂單", oid))
     return ks
 
 # ---- CSV 讀取與欄位對應 ---------------------------------------------------
@@ -76,6 +81,7 @@ def load_form_csv(path, source):
     c_acc   = find_col(h, [r"帳號名稱", r"fb 或 ig 名稱", r"帳號", r"帳戶", r"帳户",
                            r"username", r"account", r"user", r"名稱"], exclude=[r"訂單"])
     c_inv   = find_col(h, [r"發票"])
+    c_order = find_col(h, [r"訂單編號", r"order[\s_]*id", r"^order$"])
     c_mkt   = find_col(h, [r"行銷"])
     c_store = find_col(h, [r"門市", r"^store$"])
     c_ts    = find_col(h, [r"提交時間", r"時間戳", r"timestamp", r"^日期$"])
@@ -88,7 +94,7 @@ def load_form_csv(path, source):
         entries.append({
             "name": g(c_name), "email": g(c_email), "phone": g(c_phone),
             "amount": g(c_amt), "platform": plat, "account": g(c_acc),
-            "invoice": g(c_inv), "marketing": g(c_mkt), "store": g(c_store),
+            "invoice": g(c_inv), "orderId": g(c_order), "marketing": g(c_mkt), "store": g(c_store),
             "ts": g(c_ts), "source": source,
         })
     return entries

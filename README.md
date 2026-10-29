@@ -1,7 +1,8 @@
 # 盧琴樹 LUCHINSHU（鷹速國際）雙11 線下門市掃碼抽獎
 
-門市客人掃 QR 碼填資料 → 送出後跳轉活動貼文留言 → **有填表＋有留言才算參加**。
-抽獎日把線下名單與留言名單比對、再與線上名單合併去重，產生可驗證的抽獎名單。
+客人先選「線下門市」或「線上訂單」再填資料 → 送出後跳轉活動貼文留言「我要吃糖心酥」→ **有填表＋有留言才算參加**。
+門市要填發票；線上訂單不收發票，改填購買通路（官網／蝦皮／momo）和訂單編號。
+抽獎日把名單與留言比對、再合併去重，產生可驗證的抽獎名單。
 
 - 活動期間：**2026/10/30 – 2026/11/30**
 - 抽獎日：**2026/12/9**（中獎以 Email 及 FB／IG 私訊通知）
@@ -11,13 +12,13 @@
 
 | 檔案 | 用途 |
 | --- | --- |
-| `index.html` / `style.css` / `app.js` / `config.js` | 門市客人填寫的抽獎表單（手機優先） |
+| `index.html` / `style.css` / `app.js` / `config.js` | 抽獎表單（手機優先）：先選門市或線上訂單 |
 | `validate.js` | 驗證／正規化／比對合併的純函式（瀏覽器＋Node 共用） |
 | `admin.html` | 門市管理頁：本機提交紀錄、下載 CSV、清除 |
-| `Code.gs` + `DEPLOY.md` | Google Apps Script Web App：寫入試算表「線下登記」分頁 |
+| `Code.gs` + `DEPLOY.md` | Google Apps Script Web App：寫入試算表「線下登記」分頁（改版後要重新部署） |
 | `merge.py` / `merge.html` | 抽獎日名單合併＋可驗證抽籤（Python 與瀏覽器兩種版本） |
 | `make_qr.py` / `qr_store.png` | 門市 QR 碼產生器與成品 |
-| `test.js` | `node test.js` 跑 22 項測試 |
+| `test.js` | `node test.js` 跑表單驗證、合併與 Code.gs 驗證 |
 | `sample_data/` | 範例 CSV，可實際跑一次 `merge.py` 練習 |
 
 
@@ -59,7 +60,7 @@ https://<帳號>.github.io/double11-offline/?store=誠品台茂店&fb=<FB貼文�
 ```bash
 cd double11-offline
 python3 -m http.server 8000        # 開 http://localhost:8000 看表單、admin.html
-node test.js                       # 22 項測試（含呼叫 merge.py 的整合測試）
+node test.js                       # 表單、合併、Code.gs 驗證（含呼叫 merge.py）
 python3 merge.py --demo --draw 2 --seed demo-seed   # 內建範例跑一遍
 python3 merge.py sample_data/offline_form.csv sample_data/fb_comments.csv \
     sample_data/ig_comments.csv --online sample_data/online_form.csv \
@@ -75,7 +76,7 @@ python3 make_qr.py "https://<帳號>.github.io/double11-offline/?store=大江餐
    `fb_comments.csv`、`ig_comments.csv`（檔名含 fb／ig 會自動判斷平台）。
 3. **合併去重**（`merge.py` 或 `merge.html`）：
    - 只保留「有填表**且**有留言」的人（`canonical.rejected.csv` 是被剔除的沒留言名單，可複查）；
-   - 合併線上名單後，用電話（+886 正規化）／Email（小寫）／發票號碼去重，
+   - 合併後，用電話（+886 正規化）／Email（小寫）／發票號碼／訂單編號（有填才比）去重，
      同一人限一次（`canonical.dropped.csv` 記錄剔除原因）。
 4. **抽籤**：`--draw 5 --seed <公開種子>`，依 `SHA-256("seed|id")` 由小到大取前 5 名；
    印出 `list_hash` 與完整排序，任何人都能用同一 seed 重算驗證（與 `verify.py` 同風格）。

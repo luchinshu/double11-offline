@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261029i">
+<link rel="stylesheet" href="style.css?v=20261029j">
 <style>
   .admin-page .card { padding: 22px 18px; }
   .admin-head { display: flex; flex-direction: column; gap: 4px; }
@@ -74,7 +74,7 @@
       </div>
       <div class="stat">
         <div class="box"><div class="num" id="statCount">0</div><div class="lbl">提交筆數</div></div>
-        <div class="box"><div class="num" id="statDup">0</div><div class="lbl">發票重複筆數</div></div>
+        <div class="box"><div class="num" id="statDup">0</div><div class="lbl">發票／訂單重複</div></div>
       </div>
     </div>
 
@@ -94,7 +94,7 @@
     <p class="admin-note">
       ※ 下載的 CSV 為 UTF-8（含 BOM），Excel 直接開不會亂碼。<br>
       ※ 清除前請先確認已下載；清除只刪這台裝置的留底，不影響已送到試算表的資料。<br>
-      ※ 「發票重複筆數」是以發票號碼粗略比對，正式去重由總部 merge.py 統一處理。
+      ※ 「發票／訂單重複」是用發票號碼、訂單編號在這台裝置上粗略比對，正式去重由總部統一處理。
     </p>
   </section>
 
@@ -102,14 +102,30 @@
 </div>
 </div>
 
-<script src="validate.js?v=20261029i"></script>
+<script src="validate.js?v=20261029j"></script>
 <script>
 (function () {
   'use strict';
   var V = window.LotteryValidate;
   var LS_KEY = 'double11_offline_entries';
   // 與 Code.gs「線下登記」分頁相同的欄位順序（不含伺服器的重複標記）
-  var HEADERS = ['提交時間', '姓名', 'Email', '電話', '消費金額', '平台', '帳號名稱', '發票號碼', '行銷同意', '門市', '來源'];
+  var HEADERS = ['提交時間', '姓名', 'Email', '電話', '消費金額', '平台', '帳號名稱', '發票號碼', '行銷同意', '門市', '來源', '通路類型', '購買通路', '訂單編號'];
+
+  function channelLabel(e) {
+    if (e.channel === 'online' || e.source === 'online-web') return '線上';
+    if (e.channel === 'store' || e.source === 'offline-web') return '門市';
+    if (e.orderId) return '線上';
+    if (e.invoice) return '門市';
+    return '';
+  }
+  function rowOf(e) {
+    return [
+      fmtTs(e.ts), e.name || '', e.email || '', e.phone || '',
+      e.amount != null ? e.amount : '', e.platform || '', e.account || '',
+      e.invoice || '', e.marketing ? '同意' : '', e.store || '', e.source || '',
+      channelLabel(e), e.orderChannel || '', e.orderId || ''
+    ];
+  }
 
   function load() {
     try {
@@ -131,11 +147,14 @@
     var empty = document.getElementById('emptyNote');
     document.getElementById('statCount').textContent = entries.length;
 
-    var seen = {};
+    var seenInv = {};
+    var seenOrder = {};
     var dup = 0;
     entries.forEach(function (e) {
       var iv = V.normalizeInvoice(e.invoice);
-      if (iv) { if (seen[iv]) dup++; else seen[iv] = 1; }
+      if (iv) { if (seenInv[iv]) dup++; else seenInv[iv] = 1; }
+      var oid = V.normalizeOrderId(e.orderId);
+      if (oid) { if (seenOrder[oid]) dup++; else seenOrder[oid] = 1; }
     });
     document.getElementById('statDup').textContent = dup;
 
@@ -144,11 +163,7 @@
 
     var html = '<table class="admin"><thead><tr>' + HEADERS.map(function (h) { return '<th>' + h + '</th>'; }).join('') + '</tr></thead><tbody>';
     entries.slice().reverse().forEach(function (e) {
-      var row = [
-        fmtTs(e.ts), e.name || '', e.email || '', e.phone || '',
-        e.amount != null ? e.amount : '', e.platform || '', e.account || '',
-        e.invoice || '', e.marketing ? '同意' : '', e.store || '', e.source || ''
-      ];
+      var row = rowOf(e);
       html += '<tr>' + row.map(function (c) { return '<td>' + String(c).replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</td>'; }).join('') + '</tr>';
     });
     html += '</tbody></table>';
@@ -160,11 +175,7 @@
     if (!entries.length) { alert('還沒有資料可以下載喔！'); return; }
     var rows = [HEADERS];
     entries.forEach(function (e) {
-      rows.push([
-        fmtTs(e.ts), e.name || '', e.email || '', e.phone || '',
-        e.amount != null ? e.amount : '', e.platform || '', e.account || '',
-        e.invoice || '', e.marketing ? '同意' : '', e.store || '', e.source || ''
-      ]);
+      rows.push(rowOf(e));
     });
     var blob = new Blob(['\ufeff' + V.toCsv(rows)], { type: 'text/csv;charset=utf-8' });
     var a = document.createElement('a');

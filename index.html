@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>盧琴樹 LUCHINSHU｜雙11 門市限定抽獎</title>
-<meta name="description" content="盧琴樹（鷹速國際）雙11 線下門市掃碼抽獎：填資料＋到活動貼文留言就能參加！活動期間 2026/10/30–11/30，抽獎日 2026/12/9。">
+<title>盧琴樹 LUCHINSHU｜雙11 抽獎登記</title>
+<meta name="description" content="盧琴樹（鷹速國際）雙11 抽獎：門市填發票、線上訂單填訂單編號，再到活動貼文留言「我要吃糖心酥」就能參加！活動期間 2026/10/30–11/30，抽獎日 2026/12/9。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261029i">
+<link rel="stylesheet" href="style.css?v=20261029j">
 </head>
 <body>
 
@@ -62,6 +62,7 @@
         <li>登記至 <strong>2026/11/30</strong> 止</li>
         <li>抽獎日：<strong>2026/12/9</strong></li>
         <li>中獎以 <strong>Email 及 FB／IG 私訊</strong>通知</li>
+        <li>門市結帳，或官網／蝦皮／momo 下單，都可以參加</li>
         <li>同一位顧客<strong>限參加一次</strong>，重複登記僅計一筆</li>
       </ul>
     </section>
@@ -73,16 +74,66 @@
       </span>
       <span class="big">送出後會跳轉到活動貼文，<span class="gold">一定要留言才算參加！</span></span>
       沒留言不算喔～小編會用留言名單對名單，有填表＋有留言才算數
+      <span class="comment-phrase">留言請打：「我要吃糖心酥」</span>
     </div>
 
     <!-- 填寫畫面 -->
     <section class="card form-card" id="formCard">
       <h2 class="form-title"><svg class="title-ic" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>抽獎登記</h2>
-      <p class="form-hint">填完送出就會帶你去活動貼文，記得留言！</p>
+      <p class="form-hint">先選門市還是線上訂單，填完送出就會帶你去留言。記得打「我要吃糖心酥」！</p>
 
       <div class="form-error" id="formError"></div>
 
       <form id="lotteryForm" class="form-grid" novalidate>
+        <div class="field full">
+          <span class="main" id="channelLabel">你是在哪裡買的呢？ <span class="req">*</span></span>
+          <div class="platform-row" role="radiogroup" aria-labelledby="channelLabel">
+            <span>
+              <input type="radio" id="chStore" name="channel" value="store">
+              <label class="pill" for="chStore">線下門市</label>
+            </span>
+            <span>
+              <input type="radio" id="chOnline" name="channel" value="online">
+              <label class="pill" for="chOnline">線上訂單</label>
+            </span>
+          </div>
+          <p class="channel-tip" id="channelTip">先選一種，下面要填的欄位會跟著換。</p>
+          <div class="field-error" data-err-for="channel"></div>
+        </div>
+
+        <div class="field full" id="invoiceField" hidden>
+          <label class="main" for="fInvoice">發票號碼 <span class="req">*</span></label>
+          <input type="text" id="fInvoice" name="invoice" autocapitalize="characters" placeholder="2 碼英文＋8 碼數字，例：AB12345678">
+          <p class="channel-tip">門市結帳的發票，兩個英文字母加八個數字就好。</p>
+          <div class="field-error" data-err-for="invoice"></div>
+        </div>
+
+        <div class="field full" id="orderChannelField" hidden>
+          <span class="main" id="orderChannelLabel">購買通路 <span class="req">*</span></span>
+          <div class="platform-row order-channel-row" role="radiogroup" aria-labelledby="orderChannelLabel">
+            <span>
+              <input type="radio" id="ocWeb" name="orderChannel" value="官網">
+              <label class="pill" for="ocWeb">官網</label>
+            </span>
+            <span>
+              <input type="radio" id="ocShopee" name="orderChannel" value="蝦皮">
+              <label class="pill" for="ocShopee">蝦皮</label>
+            </span>
+            <span>
+              <input type="radio" id="ocMomo" name="orderChannel" value="momo">
+              <label class="pill" for="ocMomo">momo</label>
+            </span>
+          </div>
+          <div class="field-error" data-err-for="orderChannel"></div>
+        </div>
+
+        <div class="field full" id="orderIdField" hidden>
+          <label class="main" for="fOrderId">訂單編號 <span class="req">*</span></label>
+          <input type="text" id="fOrderId" name="orderId" autocapitalize="characters" autocomplete="off" placeholder="例：2026103000123">
+          <p class="channel-tip">線上訂單不用填發票（發票開比較慢），填訂單編號就能參加抽獎喔。</p>
+          <div class="field-error" data-err-for="orderId"></div>
+        </div>
+
         <div class="field">
           <label class="main" for="fName">姓名 <span class="req">*</span></label>
           <input type="text" id="fName" name="name" autocomplete="name" placeholder="請填真實姓名，中獎通知用">
@@ -129,12 +180,6 @@
         </div>
 
         <div class="field full">
-          <label class="main" for="fInvoice">發票號碼 <span class="req">*</span></label>
-          <input type="text" id="fInvoice" name="invoice" autocapitalize="characters" placeholder="2 碼英文＋8 碼數字，例：AB12345678">
-          <div class="field-error" data-err-for="invoice"></div>
-        </div>
-
-        <div class="field full">
           <span class="main">個人資料保護聲明（請滑動閱讀全文） <span class="req">*</span></span>
           <div class="privacy-box" id="privacyBox">
             <h3>盧琴樹 雙11抽獎活動｜個人資料保護聲明</h3>
@@ -172,6 +217,7 @@
       <div class="success-icon" aria-hidden="true"><svg viewBox="0 0 96 96"><circle cx="48" cy="48" r="45" fill="none" stroke="#C6A15B" stroke-opacity=".35"/><circle cx="48" cy="48" r="38" fill="none" stroke="#C6A15B" stroke-opacity=".65" stroke-width="1.5"/><circle cx="45" cy="51" r="21" fill="#E3C892"/><circle cx="54" cy="44" r="18" fill="#ffffff"/><path fill="#5C2331" d="M29 32l1.9 5.3 5.3 1.9-5.3 1.9L29 46.4l-1.9-5.3-5.3-1.9 5.3-1.9z"/><path fill="#C6A15B" d="M70 58l1.6 4.4 4.4 1.6-4.4 1.6L70 70l-1.6-4.4-4.4-1.6 4.4-1.6z"/></svg></div>
       <h2 class="success-title">登記成功！</h2>
       <p class="success-text">接下來最重要的一步：<strong>請到活動貼文留言</strong>，有留言才會進入抽獎名單！</p>
+      <p class="success-phrase">留言打這句就對了：「我要吃糖心酥」</p>
       <p class="success-text">小編是用「FB／IG 帳號」對名單的，留言帳號要和剛剛填的一樣喔。</p>
       <p class="countdown" id="countdownText">活動貼文還沒上線時，不會自動跳轉。</p>
       <a class="btn btn-gold" id="goPostBtn" href="#" target="_blank" rel="noopener">馬上去貼文留言</a>
@@ -192,8 +238,8 @@
   </main>
 </div>
 
-<script src="validate.js?v=20261029i"></script>
-<script src="config.js?v=20261029i"></script>
-<script src="app.js?v=20261029i"></script>
+<script src="validate.js?v=20261029j"></script>
+<script src="config.js?v=20261029j"></script>
+<script src="app.js?v=20261029j"></script>
 </body>
 </html>
