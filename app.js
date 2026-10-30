@@ -137,17 +137,61 @@
     localStorage.setItem(LS_KEY, JSON.stringify(arr));
   }
 
-  // GAS_ENDPOINT 有值就同步送一份到試算表；no-cors 無法讀回應，失敗也不擋流程（localStorage 已存）
+  // text/plain 避免 preflight。cors 才讀得到 JSON；讀不到就不要假裝試算表已寫入。
+  function gasSyncError(list, confirmed) {
+    var err = new Error('gas');
+    err.gasErrors = list || [];
+    err.gasConfirmed = confirmed === true;
+    return err;
+  }
+  function parseGasJson(text) {
+    var t = String(text || '').replace(/^\uFEFF/, '').trim();
+    if (!t) return null;
+    try { return JSON.parse(t); } catch (e) { return null; }
+  }
   function sendToGas(entry) {
-    if (!cfg.GAS_ENDPOINT) return;
-    try {
-      fetch(cfg.GAS_ENDPOINT, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(entry)
-      }).catch(function () { /* 網路異常：本機已有留存 */ });
-    } catch (e) { /* 舊瀏覽器沒 fetch 也沒關係 */ }
+    if (!cfg.GAS_ENDPOINT) return Promise.reject(gasSyncError(['沒有設定試算表網址'], true));
+    if (typeof fetch !== 'function') return Promise.reject(gasSyncError([], false));
+    return fetch(cfg.GAS_ENDPOINT, {
+      method: 'POST',
+      mode: 'cors',
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(entry)
+    }).then(function (res) {
+      return res.text().then(function (text) {
+        var data = parseGasJson(text);
+        if (data && data.ok === true) return data;
+        var errors = [];
+        if (data && Array.isArray(data.errors)) {
+          data.errors.forEach(function (item) {
+            if (typeof item === 'string' && item) errors.push(item);
+          });
+        }
+        // 讀得到 JSON 且 ok 不是 true：試算表明確拒收。
+        if (data && data.ok === false) throw gasSyncError(errors, true);
+        throw gasSyncError([], false);
+      });
+    }).catch(function (err) {
+      if (err && err.gasErrors) throw err;
+      // CORS / 斷線：請求可能已送達，但這頁無法確認有沒有寫進試算表。
+      throw gasSyncError([], false);
+    });
+  }
+
+  function showSyncError(err) {
+    var confirmed = err && err.gasConfirmed === true;
+    var lines = confirmed
+      ? ['名單同步失敗，請再送一次或截圖給小編']
+      : ['名單可能尚未同步到試算表。本機已留底，請再送一次，或截圖給小編。'];
+    ((err && err.gasErrors) || []).forEach(function (m) {
+      if (lines.indexOf(m) === -1) lines.push(m);
+    });
+    formError.textContent = lines.join('\n');
+    formError.classList.add('on');
+    submitBtn.disabled = false;
+    submitBtn.textContent = '送出，帶我去留言！';
+    if (formError.scrollIntoView) formError.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   function isRealPostUrl(url) {
@@ -225,8 +269,11 @@
 
     submitBtn.disabled = true;
     submitBtn.textContent = '送出中…';
-    saveLocal(entry);      // 一律存本機
-    sendToGas(entry);      // 有設定 GAS 才送
-    showSuccess(entry.platform);
+    saveLocal(entry); // 本機留底；試算表沒寫入成功也不會當成登記完成
+    sendToGas(entry).then(function () {
+      showSuccess(entry.platform);
+    }).catch(function (err) {
+      showSyncError(err);
+    });
   });
 })();

@@ -559,6 +559,7 @@ input.invalid { border-color: var(--danger); background: #fdf3f2; }
   color: var(--danger);
   font-size: .92rem;
   text-align: center;
+  white-space: pre-line;
 }
 .form-error.on { display: block; }
 
