@@ -29,7 +29,8 @@
   var invoiceField = document.getElementById('invoiceField');
   var orderChannelField = document.getElementById('orderChannelField');
   var orderIdField = document.getElementById('orderIdField');
-  var channelTip = document.getElementById('channelTip');
+  var channelValue = document.getElementById('channelValue');
+  var channelSwitch = document.getElementById('channelSwitch');
 
   function fieldValue(id) { return document.getElementById(id).value; }
   function checkedValue(name) {
@@ -37,7 +38,9 @@
     return el ? el.value : '';
   }
   function checkedPlatform() { return checkedValue('platform'); }
-  function checkedChannel() { return checkedValue('channel'); }
+  function checkedChannel() {
+    return channelValue ? V.resolveChannel({ channel: channelValue.value }) : '';
+  }
   function checkedOrderChannel() {
     // 線上僅限官網；hidden input 或單一選項
     var el = form.querySelector('input[name="orderChannel"]:checked')
@@ -50,10 +53,16 @@
     if (invoiceField) invoiceField.hidden = ch !== 'store';
     if (orderChannelField) orderChannelField.hidden = ch !== 'online';
     if (orderIdField) orderIdField.hidden = ch !== 'online';
-    if (channelTip) {
-      if (ch === 'store') channelTip.textContent = '請填門市發票號碼。要改成線上訂單，點上面另一個。';
-      else if (ch === 'online') channelTip.textContent = '線上僅限官網（chinshu.co），填訂單編號即可；蝦皮、momo 不適用。要改成門市，點上面另一個。';
-      else channelTip.textContent = '先選一種，下面要填的欄位會跟著換。';
+    if (channelSwitch) {
+      if (ch === 'store') {
+        channelSwitch.hidden = false;
+        channelSwitch.textContent = '改填線上訂單';
+      } else if (ch === 'online') {
+        channelSwitch.hidden = false;
+        channelSwitch.textContent = '改填門市發票';
+      } else {
+        channelSwitch.hidden = true;
+      }
     }
     var badge = document.getElementById('storeBadge');
     if (badge && cfg.STORE_NAME) {
@@ -62,10 +71,13 @@
     }
   }
 
-  function revealCampaign(ch, scrollToForm) {
-    if (ch === 'online') document.getElementById('chOnline').checked = true;
-    else if (ch === 'store') document.getElementById('chStore').checked = true;
+  function setChannel(ch) {
+    if (channelValue) channelValue.value = (ch === 'online' || ch === 'store') ? ch : '';
     syncChannel();
+  }
+
+  function revealCampaign(ch, scrollToForm) {
+    setChannel(ch);
     document.documentElement.classList.add('channel-open');
     if (!scrollToForm) return;
     var card = document.getElementById('formCard');
@@ -86,12 +98,13 @@
     });
   });
 
-  form.addEventListener('change', function (ev) {
-    if (ev.target && ev.target.name === 'channel') {
+  if (channelSwitch) {
+    channelSwitch.addEventListener('click', function () {
+      var next = checkedChannel() === 'online' ? 'store' : 'online';
       clearErrors();
-      syncChannel();
-    }
-  });
+      setChannel(next);
+    });
+  }
 
   function readForm() {
     return {
