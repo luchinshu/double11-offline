@@ -17,7 +17,6 @@
   var INVOICE_RE = /^[A-Za-z]{2}-?[0-9]{8}$/;      // 發票號碼：2 碼英文 + 8 碼數字，可含 dash
   var ORDER_ID_RE = /^[A-Za-z0-9][A-Za-z0-9\-_]{3,39}$/; // 訂單編號：4–40 碼英數，可含 - _
   var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;   // 夠用的 Email 格式
-  var PHONE_RE = /^[0-9+\-\s()]{8,15}$/;           // 電話（台灣手機/市話含 +886）
   var WS_RE = /\s+/g;
   var ACCOUNT_URL_PREFIX_RE =
     /^(?:https?:\/\/)?(?:(?:www|m|mobile)\.)?(?:instagram\.com|instagr\.am|facebook\.com|fb\.com|fb\.me)\//i;
@@ -66,12 +65,35 @@
     return trim(v).toLowerCase();
   }
 
-  // ---- 電話（與試算表 Meta受眾 分頁公式同一套 886 規則）-----------------
+  // ---- 電話：只收台灣手機 09xxxxxxxx（可含空白、dash；+886／886／009886 同等）----
+  function phoneDigits(v) {
+    return str(v).replace(/[^0-9]/g, '');
+  }
+  // 是台灣手機就回 09xxxxxxxx，否則回 ''。
+  function taiwanMobileNational(v) {
+    var d = phoneDigits(v);
+    if (!d) return '';
+    // 台灣撥外碼 002/005/006/007/009 + 886，或 00 + 886
+    var idd = ['002886', '005886', '006886', '007886', '009886', '00886'];
+    for (var i = 0; i < idd.length; i++) {
+      if (d.slice(0, idd[i].length) === idd[i]) {
+        d = '886' + d.slice(idd[i].length);
+        break;
+      }
+    }
+    if (/^09\d{8}$/.test(d)) return d;
+    if (/^88609\d{8}$/.test(d)) return d.slice(3);
+    if (/^8869\d{8}$/.test(d)) return '0' + d.slice(3);
+    return '';
+  }
   function isValidPhone(v) {
-    return PHONE_RE.test(trim(v));
+    return taiwanMobileNational(v) !== '';
   }
   function normalizePhone(v) {
-    var d = str(v).replace(/[^0-9]/g, '');
+    var national = taiwanMobileNational(v);
+    if (national) return '886' + national.slice(1);
+    // 舊名單裡的非手機仍用同一套 886 折法做去重，但不能靠這個通過驗證。
+    var d = phoneDigits(v);
     if (!d) return '';
     if (d.slice(0, 3) === '886') {
       if (d.charAt(3) === '0') return '886' + d.slice(4);
@@ -119,8 +141,7 @@
     if (!email) errors.email = '請填 Email，中獎通知會寄到這裡';
     else if (!isValidEmail(email)) errors.email = 'Email 格式好像不太對，再檢查一下';
 
-    if (!phone) errors.phone = '請填電話，中獎才能聯絡到你';
-    else if (!isValidPhone(phone)) errors.phone = '電話格式好像不太對，例：0912345678';
+    if (!isValidPhone(phone)) errors.phone = '請填台灣手機，例：0912345678';
 
     if (amountRaw === '' || isNaN(amount) || !isFinite(amount)) errors.amount = '消費金額請填數字，例：1280';
     else if (amount <= 0) errors.amount = '消費金額要大於 0 喔';

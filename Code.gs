@@ -20,7 +20,6 @@ var HEADERS = ['提交時間', '姓名', 'Email', '電話', '消費金額', '平
 var INVOICE_RE = /^[A-Za-z]{2}-?[0-9]{8}$/;
 var ORDER_ID_RE = /^[A-Za-z0-9][A-Za-z0-9\-_]{3,39}$/;
 var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-var PHONE_RE = /^[0-9+\-\s()]{8,15}$/;
 
 // 若用獨立指令碼（未綁定試算表），在「指令碼屬性」設定 SHEET_ID 即可
 function getSpreadsheet_() {
@@ -143,7 +142,7 @@ function validate_(d) {
   var channel = channelOf_(d);
   if (!String(d.name || '').trim()) errors.push('姓名必填');
   if (!EMAIL_RE.test(String(d.email || '').trim())) errors.push('Email 格式錯誤');
-  if (!PHONE_RE.test(String(d.phone || '').trim())) errors.push('電話格式錯誤');
+  if (!taiwanMobileNational_(d.phone)) errors.push('請填台灣手機，例：0912345678');
   var amt = Number(String(d.amount != null ? d.amount : '').replace(/,/g, ''));
   if (isNaN(amt) || !isFinite(amt) || amt <= 0) errors.push('消費金額須為大於 0 的數字');
   var p = String(d.platform || '').toUpperCase();
@@ -167,14 +166,35 @@ function normInvoice_(v) {
 function normOrderId_(v) {
   return String(v || '').trim().toUpperCase();
 }
-function normPhone_(v) {
-  var d = String(v || '').replace(/[^0-9]/g, '');
+function phoneDigits_(v) {
+  return String(v || '').replace(/[^0-9]/g, '');
+}
+// 是台灣手機就回 09xxxxxxxx，否則回 ''。規則與 validate.js taiwanMobileNational 相同。
+function taiwanMobileNational_(v) {
+  var d = phoneDigits_(v);
   if (!d) return '';
-  if (d.slice(0, 3) === '886') {
-    if (d.charAt(3) === '0') return '886' + d.slice(4);
+  var idd = ['002886', '005886', '006886', '007886', '009886', '00886'];
+  for (var i = 0; i < idd.length; i++) {
+    if (d.substring(0, idd[i].length) === idd[i]) {
+      d = '886' + d.substring(idd[i].length);
+      break;
+    }
+  }
+  if (/^09\d{8}$/.test(d)) return d;
+  if (/^88609\d{8}$/.test(d)) return d.substring(3);
+  if (/^8869\d{8}$/.test(d)) return '0' + d.substring(3);
+  return '';
+}
+function normPhone_(v) {
+  var national = taiwanMobileNational_(v);
+  if (national) return '886' + national.substring(1);
+  var d = phoneDigits_(v);
+  if (!d) return '';
+  if (d.substring(0, 3) === '886') {
+    if (d.charAt(3) === '0') return '886' + d.substring(4);
     return d;
   }
-  if (d.charAt(0) === '0') return '886' + d.slice(1);
+  if (d.charAt(0) === '0') return '886' + d.substring(1);
   if (d.length === 9) return '886' + d;
   return d;
 }

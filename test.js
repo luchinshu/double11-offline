@@ -33,16 +33,20 @@ t('Email 驗證與小寫正規化', () => {
   assert.ok(!V.isValidEmail('not-an-email'));
   assert.strictEqual(V.normalizeEmail('  Sweet@Example.COM '), 'sweet@example.com');
 });
-t('電話驗證（8–15 字元，數字與 + - 空白括號，同 Google 表單規則）', () => {
-  assert.ok(V.isValidPhone('0912-345-678'));
-  assert.ok(V.isValidPhone('+886923456789'));
-  assert.ok(!V.isValidPhone('123'));
-  assert.ok(!V.isValidPhone('+886 912 345 678')); // 16 字元超過上限，Google 表單也會擋
+t('電話只收台灣手機 09xxxxxxxx', () => {
+  ['0912345678', '0912-345-678', '0912 345 678', '+886912345678', '+886 912 345 678',
+    '886912345678', '009886912345678', '+886-912-345-678', '+8860912345678'
+  ].forEach(function (n) { assert.ok(V.isValidPhone(n), n); });
+  ['', '123', '912345678', '091234567', '091234567890', '0212345678', '02-2345-6789',
+    '+886212345678', '04-1234567'
+  ].forEach(function (n) { assert.ok(!V.isValidPhone(n), n); });
+  const badPhone = V.validateForm({ phone: '02-23456789', channel: 'store', privacyConsent: true });
+  assert.ok(badPhone.errors.phone && badPhone.errors.phone.indexOf('台灣手機') >= 0);
 });
-t('電話正規化（886 規則，與試算表公式一致）', () => {
-  assert.strictEqual(V.normalizePhone('0912-345-678'), '886912345678');
-  assert.strictEqual(V.normalizePhone('+886 912 345 678'), '886912345678');
-  assert.strictEqual(V.normalizePhone('912345678'), '886912345678'); // 9 碼補 886
+t('電話正規化：手機都收成 8869xxxxxxxx', () => {
+  ['0912-345-678', '+886 912 345 678', '886912345678', '009886912345678', '+8860912-345-678'
+  ].forEach(function (n) { assert.strictEqual(V.normalizePhone(n), '886912345678', n); });
+  assert.strictEqual(V.normalizePhone('912345678'), '886912345678'); // 舊名單 9 碼仍折 886，但驗證不通過
 });
 
 console.log('validate.js：帳號正規化');
@@ -315,6 +319,21 @@ t('舊版只送發票、source=offline-web 仍當門市', () => {
   assert.strictEqual(gas.channelOf_({ invoice: 'AB-12345678', source: 'offline-web' }), 'store');
   const ok = gasErrors(gas.validate_(Object.assign({}, basePerson, { invoice: 'AB-12345678', source: 'offline-web' })));
   assert.deepStrictEqual(ok, []);
+});
+t('非台灣手機伺服器拒收；009886 與 09 同一支', () => {
+  const land = gasErrors(gas.validate_(Object.assign({}, basePerson, {
+    channel: 'store', invoice: 'AB12345678', phone: '02-23456789'
+  })));
+  assert.ok(land.some(e => e.indexOf('台灣手機') >= 0));
+  const intl = gasErrors(gas.validate_(Object.assign({}, basePerson, {
+    channel: 'store', invoice: 'AB12345678', phone: '009886912345678'
+  })));
+  assert.deepStrictEqual(intl, []);
+  assert.strictEqual(gas.normPhone_('009886912345678'), '886912345678');
+  assert.strictEqual(gas.normPhone_('+886 912 345 678'), '886912345678');
+  assert.strictEqual(gas.normPhone_('0912-345-678'), '886912345678');
+  assert.notStrictEqual(gas.taiwanMobileNational_('02-23456789'), '0223456789');
+  assert.strictEqual(gas.taiwanMobileNational_('02-23456789'), '');
 });
 t('訂單編號比對用 trim + 大寫', () => {
   assert.strictEqual(gas.normOrderId_('  ab12 '), 'AB12');

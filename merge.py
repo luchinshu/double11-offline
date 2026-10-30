@@ -25,6 +25,10 @@ def norm_account(s):
     return s
 
 def norm_phone(s):
+    """與 validate.js normalizePhone 同一套：台灣手機先收到 8869xxxxxxxx。"""
+    national = _taiwan_mobile_national(s)
+    if national:
+        return "886" + national[1:]
     d = re.sub(r"[^0-9]", "", str(s or ""))
     if not d:
         return ""
@@ -35,6 +39,22 @@ def norm_phone(s):
     if len(d) == 9:
         return "886" + d
     return d
+
+def _taiwan_mobile_national(s):
+    d = re.sub(r"[^0-9]", "", str(s or ""))
+    if not d:
+        return ""
+    for prefix in ("002886", "005886", "006886", "007886", "009886", "00886"):
+        if d.startswith(prefix):
+            d = "886" + d[len(prefix):]
+            break
+    if re.fullmatch(r"09\d{8}", d):
+        return d
+    if re.fullmatch(r"88609\d{8}", d):
+        return d[3:]
+    if re.fullmatch(r"8869\d{8}", d):
+        return "0" + d[3:]
+    return ""
 
 def norm_email(s):
     return str(s or "").strip().lower()
