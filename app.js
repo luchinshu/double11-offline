@@ -30,7 +30,6 @@
   var orderChannelField = document.getElementById('orderChannelField');
   var orderIdField = document.getElementById('orderIdField');
   var channelValue = document.getElementById('channelValue');
-  var channelSwitch = document.getElementById('channelSwitch');
 
   function fieldValue(id) { return document.getElementById(id).value; }
   function checkedValue(name) {
@@ -53,17 +52,6 @@
     if (invoiceField) invoiceField.hidden = ch !== 'store';
     if (orderChannelField) orderChannelField.hidden = ch !== 'online';
     if (orderIdField) orderIdField.hidden = ch !== 'online';
-    if (channelSwitch) {
-      if (ch === 'store') {
-        channelSwitch.hidden = false;
-        channelSwitch.textContent = '改填線上訂單';
-      } else if (ch === 'online') {
-        channelSwitch.hidden = false;
-        channelSwitch.textContent = '改填門市發票';
-      } else {
-        channelSwitch.hidden = true;
-      }
-    }
     var badge = document.getElementById('storeBadge');
     if (badge && cfg.STORE_NAME) {
       if (ch === 'online') badge.classList.remove('on');
@@ -97,14 +85,6 @@
       revealCampaign(ch, true);
     });
   });
-
-  if (channelSwitch) {
-    channelSwitch.addEventListener('click', function () {
-      var next = checkedChannel() === 'online' ? 'store' : 'online';
-      clearErrors();
-      setChannel(next);
-    });
-  }
 
   function readForm() {
     return {
