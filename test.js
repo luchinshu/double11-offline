@@ -253,6 +253,24 @@ t('--draw 沒給 --seed 要報錯', () => {
 console.log('Code.gs：伺服器驗證（與表單同一套，不連試算表）');
 const vm = require('vm');
 const gas = {};
+gas.Utilities = {
+  formatDate: function (date, timeZone, format) {
+    if (!date || typeof date.getTime !== 'function' || timeZone !== 'Asia/Taipei' || format !== 'yyyy/MM/dd HH:mm:ss') {
+      throw new Error('unexpected formatDate ' + timeZone + ' ' + format);
+    }
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: timeZone,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hourCycle: 'h23'
+    }).formatToParts(new Date(date.getTime()));
+    const g = function (type) {
+      const part = parts.find(function (p) { return p.type === type; });
+      return part ? part.value : '';
+    };
+    return g('year') + '/' + g('month') + '/' + g('day') + ' ' + g('hour') + ':' + g('minute') + ':' + g('second');
+  }
+};
 vm.createContext(gas);
 vm.runInContext(fs.readFileSync(path.join(__dirname, 'Code.gs'), 'utf8'), gas);
 const basePerson = {
@@ -318,6 +336,8 @@ t('寫入列：線上發票留白、門市訂單編號留白，新欄接在舊�
     channel: 'online', source: 'online-web', invoice: 'AB12345678',
     orderId: ' sp-99 ', orderChannel: '官網', store: '不該寫入'
   }), 'online', ''));
+  assert.strictEqual(typeof online[0], 'string');
+  assert.ok(/^\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}$/.test(online[0]), online[0]);
   assert.strictEqual(online[7], '');
   assert.strictEqual(online[idxOf(merged)['訂單編號']], 'sp-99');
   assert.strictEqual(online[idxOf(merged)['購買通路']], '官網');
@@ -328,6 +348,7 @@ t('寫入列：線上發票留白、門市訂單編號留白，新欄接在舊�
     channel: 'store', source: 'offline-web', invoice: 'AB12345678',
     orderId: 'SHOULD-NOT', orderChannel: '蝦皮', store: '誠品台茂店'
   }), 'store', ''));
+  assert.ok(/^\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}$/.test(store[0]), store[0]);
   assert.strictEqual(store[7], 'AB12345678');
   assert.strictEqual(store[idxOf(merged)['訂單編號']], '');
   assert.strictEqual(store[idxOf(merged)['購買通路']], '');
