@@ -138,7 +138,7 @@ function orderIdError_(v) {
   if (!String(v || '').trim()) return '請輸入訂單編號';
   var norm = normOrderId_(v);
   if (/^\d+$/.test(norm)) return '請輸入完整訂單編號，需包含英文字母開頭';
-  if (!/^[A-Z]{2}\d{10,11}$/.test(norm)) return '訂單編號格式錯誤，應為 2 碼英文開頭加 10～11 位數字（例如 LU1187207774）';
+  if (!/^[A-Z]{2,3}\d{9,11}$/.test(norm)) return '訂單編號格式錯誤，應為 2～3 碼英文開頭加 9～11 位數字';
   return '';
 }
 function invoiceError_(v) {

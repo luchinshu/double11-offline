@@ -15,7 +15,7 @@
 
   // ---- 正規式（與 Google 表單版一致）------------------------------------
   var INVOICE_RE = /^[A-Z]{2}\d{8}$/;                 // 正規化後：2 碼英文 + 8 碼數字
-  var ORDER_ID_RE = /^[A-Z]{2}\d{10,11}$/;            // 正規化後：2 碼英文 + 10 或 11 碼數字
+  var ORDER_ID_RE = /^[A-Z]{2,3}\d{9,11}$/;           // 正規化後：2–3 碼英文 + 9–11 碼數字
   var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;   // 夠用的 Email 格式
   var WS_RE = /\s+/g;
   var ACCOUNT_URL_PREFIX_RE =
@@ -72,7 +72,7 @@
     return false;
   }
 
-  // ---- 訂單編號：2 碼英文 + 10 或 11 碼；尾端 APn 付款編號去掉 ----
+  // ---- 訂單編號：2–3 碼英文 + 9–11 碼；尾端 APn 付款編號去掉 ----
   function normalizeOrderId(v) {
     var t = stripSpacesAndDashes(trim(v)).toUpperCase();
     return t.replace(/AP\d+$/, '');
@@ -210,7 +210,7 @@
       var orderIssue = orderIdIssue(orderId);
       if (orderIssue === 'empty') errors.orderId = '請輸入訂單編號';
       else if (orderIssue === 'digits') errors.orderId = '請輸入完整訂單編號，需包含英文字母開頭';
-      else if (orderIssue === 'format') errors.orderId = '訂單編號格式錯誤，應為 2 碼英文開頭加 10～11 位數字（例如 LU1187207774）';
+      else if (orderIssue === 'format') errors.orderId = '訂單編號格式錯誤，應為 2～3 碼英文開頭加 9～11 位數字';
     }
 
     if (d.privacyConsent !== true) errors.privacyConsent = '要勾選同意個資聲明才能參加抽獎喔';

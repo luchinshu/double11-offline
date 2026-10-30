@@ -129,7 +129,7 @@ t('線上沒訂單編號或不合法不通過', () => {
   const digits = V.validateForm(Object.assign({}, ONLINE, { orderId: '2026103000123' }));
   assert.strictEqual(digits.errors.orderId, '請輸入完整訂單編號，需包含英文字母開頭');
   const bad = V.validateForm(Object.assign({}, ONLINE, { orderId: 'ABC' }));
-  assert.ok(bad.errors.orderId.indexOf('2 碼英文') >= 0);
+  assert.strictEqual(bad.errors.orderId, '訂單編號格式錯誤，應為 2～3 碼英文開頭加 9～11 位數字');
   const r = V.validateForm(Object.assign({}, ONLINE, { orderId: '' }));
   assert.ok(r.errors.orderId && !r.errors.invoice);
 });
@@ -143,16 +143,19 @@ t('線上購買通路只接受官網（蝦皮／momo 不參加）', () => {
   assert.ok(!V.validateForm(Object.assign({}, ONLINE, { orderChannel: 'PChome' })).ok);
   assert.ok(!V.validateForm(Object.assign({}, ONLINE, { orderChannel: '' })).ok);
 });
-t('訂單編號：2 碼英文加 10 或 11 碼，AP 尾碼去掉', () => {
+t('訂單編號：2～3 碼英文加 9～11 碼，AP 尾碼去掉', () => {
   assert.strictEqual(V.normalizeOrderId(' lu1187207774ap1 '), 'LU1187207774');
   assert.strictEqual(V.normalizeOrderId('LU1187207774'), 'LU1187207774');
-  assert.strictEqual(V.normalizeOrderId('ab12345678901AP2'), 'AB12345678901');
+  assert.strictEqual(V.normalizeOrderId('abc1234567890AP2'), 'ABC1234567890');
   assert.ok(V.isValidOrderId('LU1187207774AP12'));
+  assert.ok(V.isValidOrderId('LU118720777'));
   assert.ok(V.isValidOrderId('AB12345678901'));
+  assert.ok(V.isValidOrderId('ABC123456789'));
   assert.ok(V.validateForm(Object.assign({}, ONLINE, { orderId: 'LU1187207774ap1' })).ok);
-  assert.ok(V.validateForm(Object.assign({}, ONLINE, { orderId: 'xy12345678901' })).ok);
+  assert.ok(V.validateForm(Object.assign({}, ONLINE, { orderId: 'xy123456789' })).ok);
   assert.ok(!V.isValidOrderId('2026103000123'));
-  assert.ok(!V.isValidOrderId('LU118720777'));
+  assert.ok(!V.isValidOrderId('LU11872077'));
+  assert.ok(!V.isValidOrderId('ABCD123456789'));
   assert.ok(!V.isValidOrderId('ab'));
 });
 t('channel 別名 store／線上', () => {
@@ -372,6 +375,12 @@ t('訂單要 LU、假發票與重複發票在伺服器擋下', () => {
   })));
   assert.deepStrictEqual(lu, []);
   assert.strictEqual(gas.normOrderId_('lu1187207774ap1'), 'LU1187207774');
+  assert.deepStrictEqual(gasErrors(gas.validate_(Object.assign({}, basePerson, {
+    channel: 'online', orderId: 'abc123456789', orderChannel: '官網'
+  }))), []);
+  assert.ok(gasErrors(gas.validate_(Object.assign({}, basePerson, {
+    channel: 'online', orderId: 'LU11872077', orderChannel: '官網'
+  }))).some(function (e) { return e.indexOf('9～11') >= 0; }));
   const fake = gasErrors(gas.validate_(Object.assign({}, basePerson, {
     channel: 'store', invoice: 'AB11111111'
   })));
