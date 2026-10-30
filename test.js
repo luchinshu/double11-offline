@@ -66,7 +66,7 @@ const GOOD = {
 const ONLINE = {
   name: '林小安', email: 'an@example.com', phone: '0988123456',
   amount: '1111', platform: 'FB', account: 'an_sweet',
-  channel: 'online', orderId: 'sp-241029001', orderChannel: '蝦皮',
+  channel: 'online', orderId: 'sp-241029001', orderChannel: '官網',
   privacyConsent: true
 };
 t('完整資料通過', () => assert.ok(V.validateForm(GOOD).ok));
@@ -108,11 +108,13 @@ t('線上沒訂單編號或不合法不通過', () => {
   const r = V.validateForm(Object.assign({}, ONLINE, { orderId: '' }));
   assert.ok(r.errors.orderId && !r.errors.invoice);
 });
-t('線上購買通路只接受官網／蝦皮／momo', () => {
+t('線上購買通路只接受官網（蝦皮／momo 不參加）', () => {
   assert.ok(V.validateForm(Object.assign({}, ONLINE, { orderChannel: '官網' })).ok);
-  assert.ok(V.validateForm(Object.assign({}, ONLINE, { orderChannel: 'momo' })).ok);
-  assert.ok(V.validateForm(Object.assign({}, ONLINE, { orderChannel: 'MOMO' })).ok);
-  assert.strictEqual(V.canonicalOrderChannel('MOMO'), 'momo');
+  assert.ok(!V.validateForm(Object.assign({}, ONLINE, { orderChannel: 'momo' })).ok);
+  assert.ok(!V.validateForm(Object.assign({}, ONLINE, { orderChannel: '蝦皮' })).ok);
+  assert.ok(!V.validateForm(Object.assign({}, ONLINE, { orderChannel: 'MOMO' })).ok);
+  assert.strictEqual(V.canonicalOrderChannel('MOMO'), '');
+  assert.strictEqual(V.canonicalOrderChannel('官網'), '官網');
   assert.ok(!V.validateForm(Object.assign({}, ONLINE, { orderChannel: 'PChome' })).ok);
   assert.ok(!V.validateForm(Object.assign({}, ONLINE, { orderChannel: '' })).ok);
 });
@@ -264,27 +266,31 @@ t('門市有發票通過；沒發票失敗', () => {
   const bad = gasErrors(gas.validate_(Object.assign({}, basePerson, { channel: 'store', invoice: '', source: 'offline-web' })));
   assert.ok(bad.some(e => e.indexOf('發票') >= 0));
 });
-t('線上不需發票；要訂單編號與官網／蝦皮／momo', () => {
+t('線上不需發票；要訂單編號與官網（蝦皮／momo 拒收）', () => {
   const ok = gasErrors(gas.validate_(Object.assign({}, basePerson, {
     channel: 'online', source: 'online-web', invoice: '',
-    orderId: 'sp-241029001', orderChannel: '蝦皮'
+    orderId: 'sp-241029001', orderChannel: '官網'
   })));
   assert.deepStrictEqual(ok, []);
-  ['官網', 'momo', 'MOMO'].forEach(ch => {
+  const okOfficial = gasErrors(gas.validate_(Object.assign({}, basePerson, {
+    channel: 'online', orderId: '202610300099', orderChannel: '官網'
+  })));
+  assert.deepStrictEqual(okOfficial, []);
+  ['momo', 'MOMO', '蝦皮'].forEach(ch => {
     const r = gasErrors(gas.validate_(Object.assign({}, basePerson, {
       channel: 'online', orderId: '202610300099', orderChannel: ch
     })));
-    assert.deepStrictEqual(r, [], ch);
+    assert.ok(r.some(e => e.indexOf('官網') >= 0 || e.indexOf('通路') >= 0), ch);
   });
   const noInvRequired = gasErrors(gas.validate_(Object.assign({}, basePerson, {
-    channel: 'online', orderId: 'momo99887766', orderChannel: 'momo', invoice: ''
+    channel: 'online', orderId: 'web99887766', orderChannel: '官網', invoice: ''
   })));
   assert.deepStrictEqual(noInvRequired, []);
   const missing = gasErrors(gas.validate_(Object.assign({}, basePerson, {
     channel: 'online', orderId: '', orderChannel: '', invoice: ''
   })));
   assert.ok(missing.some(e => e.indexOf('訂單') >= 0));
-  assert.ok(missing.some(e => e.indexOf('通路') >= 0));
+  assert.ok(missing.some(e => e.indexOf('官網') >= 0 || e.indexOf('通路') >= 0));
   assert.ok(!missing.some(e => e.indexOf('發票') >= 0));
 });
 t('舊版只送發票、source=offline-web 仍當門市', () => {
@@ -294,7 +300,8 @@ t('舊版只送發票、source=offline-web 仍當門市', () => {
 });
 t('訂單編號比對用 trim + 大寫', () => {
   assert.strictEqual(gas.normOrderId_('  ab12 '), 'AB12');
-  assert.strictEqual(gas.canonicalOrderChannel_('MOMO'), 'momo');
+  assert.strictEqual(gas.canonicalOrderChannel_('MOMO'), '');
+  assert.strictEqual(gas.canonicalOrderChannel_('官網'), '官網');
 });
 t('寫入列：線上發票留白、門市訂單編號留白，新欄接在舊表頭後面', () => {
   const old = ['提交時間', '姓名', 'Email', '電話', '消費金額', '平台', '帳號名稱', '發票號碼', '行銷同意', '門市', '來源', '重複標記'];
@@ -309,11 +316,11 @@ t('寫入列：線上發票留白、門市訂單編號留白，新欄接在舊�
   }
   const online = Array.from(gas.buildRow_(merged, idxOf(merged), Object.assign({}, basePerson, {
     channel: 'online', source: 'online-web', invoice: 'AB12345678',
-    orderId: ' sp-99 ', orderChannel: 'MOMO', store: '不該寫入'
+    orderId: ' sp-99 ', orderChannel: '官網', store: '不該寫入'
   }), 'online', ''));
   assert.strictEqual(online[7], '');
   assert.strictEqual(online[idxOf(merged)['訂單編號']], 'sp-99');
-  assert.strictEqual(online[idxOf(merged)['購買通路']], 'momo');
+  assert.strictEqual(online[idxOf(merged)['購買通路']], '官網');
   assert.strictEqual(online[idxOf(merged)['通路類型']], '線上');
   assert.strictEqual(online[idxOf(merged)['來源']], 'online-web');
   assert.strictEqual(online[idxOf(merged)['門市']], '');
