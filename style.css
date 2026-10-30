@@ -245,6 +245,7 @@ body {
   border: 1px solid rgba(198, 161, 91, .6);
   background: rgba(251, 246, 238, .07);
   box-shadow: inset 0 0 0 1px rgba(61, 23, 34, .25), inset 0 1px 0 rgba(251, 246, 238, .12);
+  overflow: visible;
 }
 .prize-tag {
   position: absolute;
@@ -294,7 +295,8 @@ body {
   background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 58%, #B08A44 100%);
   border: 1px solid rgba(255, 253, 246, .65);
   box-shadow: 0 8px 22px rgba(20, 6, 10, .35), inset 0 0 0 1px rgba(140, 106, 47, .35);
-  overflow: hidden;
+  /* 不可 hidden：會裁掉 top:-11px 的「頭獎」標籤 */
+  overflow: visible;
 }
 .prize-grand .prize-tag {
   background: linear-gradient(135deg, var(--wine), var(--wine-dark));
@@ -317,13 +319,19 @@ body {
 .prize-grand::after {
   content: "";
   position: absolute;
-  top: -60%;
-  bottom: -60%;
-  left: 0;
-  width: 34%;
-  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, .6), transparent);
-  transform: skewX(-20deg);
-  animation: shine 3.4s ease-in-out infinite;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 0%, transparent 35%, rgba(255, 255, 255, .55) 50%, transparent 65%, transparent 100%);
+  background-size: 220% 100%;
+  animation: shineSlide 3.4s ease-in-out infinite;
+  z-index: 0;
+}
+.prize-grand > * { position: relative; z-index: 1; }
+@keyframes shineSlide {
+  0% { background-position: 120% 0; }
+  55%, 100% { background-position: -120% 0; }
 }
 .prize-grand .g1 { top: 12px; right: 14px; }
 .prize-grand .g2 { bottom: 12px; left: 14px; width: 7px; height: 7px; animation-delay: 1s; }
