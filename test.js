@@ -20,12 +20,30 @@ console.log('validate.js：發票 / Email / 電話');
 t('發票格式通過 AB12345678 與 AB-12345678', () => {
   assert.ok(V.isValidInvoice('AB12345678'));
   assert.ok(V.isValidInvoice('ab-12345678'));
+  assert.ok(V.isValidInvoice('ＡＢ１２３４５６７８'));
   assert.ok(!V.isValidInvoice('A12345678'));    // 少一碼英文
   assert.ok(!V.isValidInvoice('AB1234567'));    // 少一碼數字
   assert.ok(!V.isValidInvoice('AB123456789'));  // 多一碼
+  assert.ok(!V.isValidInvoice('12345678'));
+  assert.ok(!V.isValidInvoice('11111111'));
+  assert.ok(!V.isValidInvoice('AB11111111'));
+  assert.ok(!V.isValidInvoice('AB00000000'));
+  assert.ok(!V.isValidInvoice('AB87654321'));
 });
 t('發票正規化去 dash 並轉大寫', () => {
   assert.strictEqual(V.normalizeInvoice('ab-87654321'), 'AB87654321');
+});
+t('假發票與重複發票不通過', () => {
+  const person = {
+    name: '王', email: 'a@b.co', phone: '0912345678', amount: '10',
+    platform: 'IG', account: 'a', channel: 'store', privacyConsent: true
+  };
+  assert.strictEqual(V.validateForm(Object.assign({}, person, { invoice: 'AB11111111' })).errors.invoice, '發票號碼無效，請依實際收據填寫');
+  assert.ok(V.validateForm(Object.assign({}, person, { invoice: '12345678' })).errors.invoice.indexOf('格式錯誤') >= 0);
+  assert.strictEqual(V.validateForm(Object.assign({}, person, { invoice: '' })).errors.invoice, '請輸入發票號碼');
+  const dup = V.validateForm(Object.assign({}, person, { invoice: 'ab-12345678' }), { invoices: ['AB12345678'] });
+  assert.strictEqual(dup.errors.invoice, '此發票號碼已被登錄，每張發票限登錄一次');
+  assert.ok(V.isValidPhone('0912345678'));
 });
 t('Email 驗證與小寫正規化', () => {
   assert.ok(V.isValidEmail('a@b.co'));
@@ -33,16 +51,20 @@ t('Email 驗證與小寫正規化', () => {
   assert.ok(!V.isValidEmail('not-an-email'));
   assert.strictEqual(V.normalizeEmail('  Sweet@Example.COM '), 'sweet@example.com');
 });
-t('電話驗證（8–15 字元，數字與 + - 空白括號，同 Google 表單規則）', () => {
-  assert.ok(V.isValidPhone('0912-345-678'));
-  assert.ok(V.isValidPhone('+886923456789'));
-  assert.ok(!V.isValidPhone('123'));
-  assert.ok(!V.isValidPhone('+886 912 345 678')); // 16 字元超過上限，Google 表單也會擋
+t('電話只收台灣手機 09xxxxxxxx', () => {
+  ['0912345678', '0912-345-678', '0912 345 678', '+886912345678', '+886 912 345 678',
+    '886912345678', '009886912345678', '+886-912-345-678', '+8860912345678'
+  ].forEach(function (n) { assert.ok(V.isValidPhone(n), n); });
+  ['', '123', '912345678', '091234567', '091234567890', '0212345678', '02-2345-6789',
+    '+886212345678', '04-1234567'
+  ].forEach(function (n) { assert.ok(!V.isValidPhone(n), n); });
+  const badPhone = V.validateForm({ phone: '02-23456789', channel: 'store', privacyConsent: true });
+  assert.ok(badPhone.errors.phone && badPhone.errors.phone.indexOf('台灣手機') >= 0);
 });
-t('電話正規化（886 規則，與試算表公式一致）', () => {
-  assert.strictEqual(V.normalizePhone('0912-345-678'), '886912345678');
-  assert.strictEqual(V.normalizePhone('+886 912 345 678'), '886912345678');
-  assert.strictEqual(V.normalizePhone('912345678'), '886912345678'); // 9 碼補 886
+t('電話正規化：手機都收成 8869xxxxxxxx', () => {
+  ['0912-345-678', '+886 912 345 678', '886912345678', '009886912345678', '+8860912-345-678'
+  ].forEach(function (n) { assert.strictEqual(V.normalizePhone(n), '886912345678', n); });
+  assert.strictEqual(V.normalizePhone('912345678'), '886912345678'); // 舊名單 9 碼仍折 886，但驗證不通過
 });
 
 console.log('validate.js：帳號正規化');
@@ -66,7 +88,7 @@ const GOOD = {
 const ONLINE = {
   name: '林小安', email: 'an@example.com', phone: '0988123456',
   amount: '1111', platform: 'FB', account: 'an_sweet',
-  channel: 'online', orderId: 'sp-241029001', orderChannel: '官網',
+  channel: 'online', orderId: 'LU1187207774', orderChannel: '官網',
   privacyConsent: true
 };
 t('完整資料通過', () => assert.ok(V.validateForm(GOOD).ok));
@@ -102,9 +124,12 @@ t('線上不需發票，有訂單編號與通路就通過', () => {
   assert.ok(V.validateForm(Object.assign({}, ONLINE, { invoice: '不是發票' })).ok);
 });
 t('線上沒訂單編號或不合法不通過', () => {
-  assert.ok(!V.validateForm(Object.assign({}, ONLINE, { orderId: '  ' })).ok);
-  assert.ok(!V.validateForm(Object.assign({}, ONLINE, { orderId: 'ABC' })).ok);       // 太短
-  assert.ok(!V.validateForm(Object.assign({}, ONLINE, { orderId: 'ABCDEF' })).ok);   // 沒有數字
+  const empty = V.validateForm(Object.assign({}, ONLINE, { orderId: '  ' }));
+  assert.strictEqual(empty.errors.orderId, '請輸入訂單編號');
+  const digits = V.validateForm(Object.assign({}, ONLINE, { orderId: '2026103000123' }));
+  assert.strictEqual(digits.errors.orderId, '請輸入完整訂單編號，需包含英文字母開頭');
+  const bad = V.validateForm(Object.assign({}, ONLINE, { orderId: 'ABC' }));
+  assert.strictEqual(bad.errors.orderId, '訂單編號格式錯誤，應為 2～3 碼英文開頭加 9～11 位數字');
   const r = V.validateForm(Object.assign({}, ONLINE, { orderId: '' }));
   assert.ok(r.errors.orderId && !r.errors.invoice);
 });
@@ -118,10 +143,19 @@ t('線上購買通路只接受官網（蝦皮／momo 不參加）', () => {
   assert.ok(!V.validateForm(Object.assign({}, ONLINE, { orderChannel: 'PChome' })).ok);
   assert.ok(!V.validateForm(Object.assign({}, ONLINE, { orderChannel: '' })).ok);
 });
-t('訂單編號正規化 trim + 大寫', () => {
-  assert.strictEqual(V.normalizeOrderId('  ab-12x '), 'AB-12X');
-  assert.ok(V.isValidOrderId('AB-12'));
-  assert.ok(V.isValidOrderId('2026103000123'));
+t('訂單編號：2～3 碼英文加 9～11 碼，AP 尾碼去掉', () => {
+  assert.strictEqual(V.normalizeOrderId(' lu1187207774ap1 '), 'LU1187207774');
+  assert.strictEqual(V.normalizeOrderId('LU1187207774'), 'LU1187207774');
+  assert.strictEqual(V.normalizeOrderId('abc1234567890AP2'), 'ABC1234567890');
+  assert.ok(V.isValidOrderId('LU1187207774AP12'));
+  assert.ok(V.isValidOrderId('LU118720777'));
+  assert.ok(V.isValidOrderId('AB12345678901'));
+  assert.ok(V.isValidOrderId('ABC123456789'));
+  assert.ok(V.validateForm(Object.assign({}, ONLINE, { orderId: 'LU1187207774ap1' })).ok);
+  assert.ok(V.validateForm(Object.assign({}, ONLINE, { orderId: 'xy123456789' })).ok);
+  assert.ok(!V.isValidOrderId('2026103000123'));
+  assert.ok(!V.isValidOrderId('LU11872077'));
+  assert.ok(!V.isValidOrderId('ABCD123456789'));
   assert.ok(!V.isValidOrderId('ab'));
 });
 t('channel 別名 store／線上', () => {
@@ -287,21 +321,21 @@ t('門市有發票通過；沒發票失敗', () => {
 t('線上不需發票；要訂單編號與官網（蝦皮／momo 拒收）', () => {
   const ok = gasErrors(gas.validate_(Object.assign({}, basePerson, {
     channel: 'online', source: 'online-web', invoice: '',
-    orderId: 'sp-241029001', orderChannel: '官網'
+    orderId: 'LU1187207774', orderChannel: '官網'
   })));
   assert.deepStrictEqual(ok, []);
   const okOfficial = gasErrors(gas.validate_(Object.assign({}, basePerson, {
-    channel: 'online', orderId: '202610300099', orderChannel: '官網'
+    channel: 'online', orderId: 'LU1187207774', orderChannel: '官網'
   })));
   assert.deepStrictEqual(okOfficial, []);
   ['momo', 'MOMO', '蝦皮'].forEach(ch => {
     const r = gasErrors(gas.validate_(Object.assign({}, basePerson, {
-      channel: 'online', orderId: '202610300099', orderChannel: ch
+      channel: 'online', orderId: 'LU1187207774', orderChannel: ch
     })));
     assert.ok(r.some(e => e.indexOf('官網') >= 0 || e.indexOf('通路') >= 0), ch);
   });
   const noInvRequired = gasErrors(gas.validate_(Object.assign({}, basePerson, {
-    channel: 'online', orderId: 'web99887766', orderChannel: '官網', invoice: ''
+    channel: 'online', orderId: 'LU1187207774', orderChannel: '官網', invoice: ''
   })));
   assert.deepStrictEqual(noInvRequired, []);
   const missing = gasErrors(gas.validate_(Object.assign({}, basePerson, {
@@ -315,6 +349,44 @@ t('舊版只送發票、source=offline-web 仍當門市', () => {
   assert.strictEqual(gas.channelOf_({ invoice: 'AB-12345678', source: 'offline-web' }), 'store');
   const ok = gasErrors(gas.validate_(Object.assign({}, basePerson, { invoice: 'AB-12345678', source: 'offline-web' })));
   assert.deepStrictEqual(ok, []);
+});
+t('非台灣手機伺服器拒收；009886 與 09 同一支', () => {
+  const land = gasErrors(gas.validate_(Object.assign({}, basePerson, {
+    channel: 'store', invoice: 'AB12345678', phone: '02-23456789'
+  })));
+  assert.ok(land.some(e => e.indexOf('台灣手機') >= 0));
+  const intl = gasErrors(gas.validate_(Object.assign({}, basePerson, {
+    channel: 'store', invoice: 'AB12345678', phone: '009886912345678'
+  })));
+  assert.deepStrictEqual(intl, []);
+  assert.strictEqual(gas.normPhone_('009886912345678'), '886912345678');
+  assert.strictEqual(gas.normPhone_('+886 912 345 678'), '886912345678');
+  assert.strictEqual(gas.normPhone_('0912-345-678'), '886912345678');
+  assert.notStrictEqual(gas.taiwanMobileNational_('02-23456789'), '0223456789');
+  assert.strictEqual(gas.taiwanMobileNational_('02-23456789'), '');
+});
+t('訂單要 LU、假發票與重複發票在伺服器擋下', () => {
+  const digits = gasErrors(gas.validate_(Object.assign({}, basePerson, {
+    channel: 'online', orderId: '2026103000123', orderChannel: '官網'
+  })));
+  assert.ok(digits.some(function (e) { return e.indexOf('英文字母') >= 0; }));
+  const lu = gasErrors(gas.validate_(Object.assign({}, basePerson, {
+    channel: 'online', orderId: 'lu1187207774ap1', orderChannel: '官網'
+  })));
+  assert.deepStrictEqual(lu, []);
+  assert.strictEqual(gas.normOrderId_('lu1187207774ap1'), 'LU1187207774');
+  assert.deepStrictEqual(gasErrors(gas.validate_(Object.assign({}, basePerson, {
+    channel: 'online', orderId: 'abc123456789', orderChannel: '官網'
+  }))), []);
+  assert.ok(gasErrors(gas.validate_(Object.assign({}, basePerson, {
+    channel: 'online', orderId: 'LU11872077', orderChannel: '官網'
+  }))).some(function (e) { return e.indexOf('9～11') >= 0; }));
+  const fake = gasErrors(gas.validate_(Object.assign({}, basePerson, {
+    channel: 'store', invoice: 'AB11111111'
+  })));
+  assert.ok(fake.some(function (e) { return e.indexOf('無效') >= 0; }));
+  assert.strictEqual(gas.invoiceAlreadyUsed_(['ab-12345678', 'ZZ00000000'], 'AB12345678'), true);
+  assert.strictEqual(gas.invoiceAlreadyUsed_(['AB87654321'], 'AB12345678'), false);
 });
 t('訂單編號比對用 trim + 大寫', () => {
   assert.strictEqual(gas.normOrderId_('  ab12 '), 'AB12');
@@ -334,12 +406,12 @@ t('寫入列：線上發票留白、門市訂單編號留白，新欄接在舊�
   }
   const online = Array.from(gas.buildRow_(merged, idxOf(merged), Object.assign({}, basePerson, {
     channel: 'online', source: 'online-web', invoice: 'AB12345678',
-    orderId: ' sp-99 ', orderChannel: '官網', store: '不該寫入'
+    orderId: ' lu1187207774ap1 ', orderChannel: '官網', store: '不該寫入'
   }), 'online', ''));
   assert.strictEqual(typeof online[0], 'string');
   assert.ok(/^\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}$/.test(online[0]), online[0]);
   assert.strictEqual(online[7], '');
-  assert.strictEqual(online[idxOf(merged)['訂單編號']], 'sp-99');
+  assert.strictEqual(online[idxOf(merged)['訂單編號']], 'LU1187207774');
   assert.strictEqual(online[idxOf(merged)['購買通路']], '官網');
   assert.strictEqual(online[idxOf(merged)['通路類型']], '線上');
   assert.strictEqual(online[idxOf(merged)['來源']], 'online-web');
