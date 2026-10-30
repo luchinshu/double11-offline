@@ -504,34 +504,7 @@ input.invalid { border-color: var(--danger); background: #fdf3f2; }
   line-height: 1.55;
 }
 #channelValue { display: none; }
-.form-grid > .channel-switch-row { grid-column: 1 / -1; }
-.channel-switch-row {
-  margin: -4px 0 12px;
-  text-align: center;
-}
-.channel-switch-row:has(.channel-switch[hidden]):not(:has(.field-error.on)) {
-  display: none;
-}
-.channel-switch {
-  appearance: none;
-  -webkit-appearance: none;
-  border: none;
-  background: none;
-  padding: 0;
-  color: var(--gold-deep);
-  font-family: var(--sans);
-  font-size: .88rem;
-  font-weight: 700;
-  letter-spacing: .04em;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
-}
-.channel-switch:hover { color: var(--wine); }
-.channel-switch:focus-visible {
-  outline: 2px solid var(--gold);
-  outline-offset: 3px;
-}
+.form-grid > .field-error { grid-column: 1 / -1; }
 .field[hidden] { display: none !important; }
 
 /* 個資全文 */
