@@ -51,8 +51,10 @@ body {
 .hero-img {
   display: block;
   width: 100%;
-  aspect-ratio: 4 / 5;
-  object-fit: cover;
+  height: auto;
+  /* 海報含獎項區，勿用 4:5 cover 裁掉底部 */
+  aspect-ratio: auto;
+  object-fit: contain;
   object-position: top center;
 }
 .store-badge {
@@ -209,7 +211,7 @@ body {
     radial-gradient(120% 90% at 50% -10%, rgba(198, 161, 91, .22), transparent 55%),
     linear-gradient(160deg, #6E2B3B 0%, var(--wine) 48%, var(--wine-dark) 100%);
   color: var(--cream);
-  overflow: hidden;
+  overflow: visible;
 }
 .board-title {
   font-family: var(--serif);
@@ -233,6 +235,7 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
+  padding-top: 12px; /* 留給 absolute 的獎項標籤 */
 }
 .prize {
   position: relative;
