@@ -14,8 +14,8 @@
   'use strict';
 
   // ---- 正規式（與 Google 表單版一致）------------------------------------
-  var INVOICE_RE = /^[A-Za-z]{2}-?[0-9]{8}$/;      // 發票號碼：2 碼英文 + 8 碼數字，可含 dash
-  var ORDER_ID_RE = /^[A-Za-z0-9][A-Za-z0-9\-_]{3,39}$/; // 訂單編號：4–40 碼英數，可含 - _
+  var INVOICE_RE = /^[A-Z]{2}\d{8}$/;                 // 正規化後：2 碼英文 + 8 碼數字
+  var ORDER_ID_RE = /^[A-Z]{2}\d{10,11}$/;            // 正規化後：2 碼英文 + 10 或 11 碼數字
   var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;   // 夠用的 Email 格式
   var WS_RE = /\s+/g;
   var ACCOUNT_URL_PREFIX_RE =
@@ -24,21 +24,68 @@
   function str(v) { return v == null ? '' : String(v); }
   function trim(v) { return str(v).trim(); }
 
-  // ---- 發票號碼 ---------------------------------------------------------
-  function isValidInvoice(v) {
-    return INVOICE_RE.test(trim(v));
+  function toHalfWidth(s) {
+    return str(s).replace(/[\uFF01-\uFF5E]/g, function (ch) {
+      return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0);
+    }).replace(/\u3000/g, ' ');
   }
-  function normalizeInvoice(v) {
-    return trim(v).toUpperCase().replace(/-/g, '');  // AB-12345678 → AB12345678
+  function stripSpacesAndDashes(s) {
+    return toHalfWidth(s).replace(/[\s\-–—]/g, '');
   }
 
-  // ---- 訂單編號／購買通路（線上；比對前 trim + 大寫）----------------------
-  function isValidOrderId(v) {
-    var t = trim(v);
-    return ORDER_ID_RE.test(t) && /[0-9]/.test(t);
+  // ---- 發票號碼：2 碼英文字母＋8 碼數字；連號與同一數字不收 ----
+  function normalizeInvoice(v) {
+    return stripSpacesAndDashes(trim(v)).toUpperCase();
   }
+  function fakeInvoiceDigits(digits) {
+    if (!/^\d{8}$/.test(digits)) return false;
+    if (/^(\d)\1{7}$/.test(digits)) return true;
+    // AB12345678 是格式範例，也是既有測試的合法發票，不當成連號擋下。
+    if (digits === '12345678') return false;
+    var asc = true;
+    var desc = true;
+    for (var i = 1; i < 8; i++) {
+      var diff = digits.charCodeAt(i) - digits.charCodeAt(i - 1);
+      if (diff !== 1) asc = false;
+      if (diff !== -1) desc = false;
+    }
+    return asc || desc;
+  }
+  // '' | 'empty' | 'format' | 'fake'
+  function invoiceIssue(v) {
+    if (!trim(v)) return 'empty';
+    var norm = normalizeInvoice(v);
+    if (!/^[A-Z]{2}\d{8}$/.test(norm)) return 'format';
+    if (fakeInvoiceDigits(norm.slice(2))) return 'fake';
+    return '';
+  }
+  function isValidInvoice(v) {
+    return invoiceIssue(v) === '';
+  }
+  function invoiceAlreadyUsed(list, invoice) {
+    var norm = normalizeInvoice(invoice);
+    if (!norm) return false;
+    list = list || [];
+    for (var i = 0; i < list.length; i++) {
+      if (normalizeInvoice(list[i]) === norm) return true;
+    }
+    return false;
+  }
+
+  // ---- 訂單編號：2 碼英文 + 10 或 11 碼；尾端 APn 付款編號去掉 ----
   function normalizeOrderId(v) {
-    return trim(v).toUpperCase();
+    var t = stripSpacesAndDashes(trim(v)).toUpperCase();
+    return t.replace(/AP\d+$/, '');
+  }
+  function isValidOrderId(v) {
+    return ORDER_ID_RE.test(normalizeOrderId(v));
+  }
+  function orderIdIssue(v) {
+    if (!trim(v)) return 'empty';
+    var norm = normalizeOrderId(v);
+    if (/^\d+$/.test(norm)) return 'digits';
+    if (!ORDER_ID_RE.test(norm)) return 'format';
+    return '';
   }
   function canonicalOrderChannel(v) {
     var t = trim(v);
@@ -118,8 +165,9 @@
   }
 
   // ---- 表單驗證 ----------------------------------------------------------
-  function validateForm(d) {
+  function validateForm(d, registry) {
     d = d || {};
+    registry = registry || {};
     var errors = {};
     var name = trim(d.name);
     var email = trim(d.email);
@@ -152,12 +200,17 @@
     else if (account.length > 100) errors.account = '帳號名稱太長了，請確認一下';
 
     if (channel === 'store') {
-      if (!invoice) errors.invoice = '請填發票號碼，例：AB12345678';
-      else if (!isValidInvoice(invoice)) errors.invoice = '發票號碼格式是 2 碼英文＋8 碼數字，例：AB12345678';
+      var invIssue = invoiceIssue(invoice);
+      if (invIssue === 'empty') errors.invoice = '請輸入發票號碼';
+      else if (invIssue === 'format') errors.invoice = '發票號碼格式錯誤，應為 2 碼英文字母加 8 碼數字（例如 AB12345678）';
+      else if (invIssue === 'fake') errors.invoice = '發票號碼無效，請依實際收據填寫';
+      else if (invoiceAlreadyUsed(registry.invoices, invoice)) errors.invoice = '此發票號碼已被登錄，每張發票限登錄一次';
     } else if (channel === 'online') {
       if (!orderChannel) errors.orderChannel = '線上訂單僅限官網購買才可參加';
-      if (!orderId) errors.orderId = '請填訂單編號，線上訂單不用發票喔';
-      else if (!isValidOrderId(orderId)) errors.orderId = '訂單編號請填訂單頁上的編號（4 碼以上，要有數字）';
+      var orderIssue = orderIdIssue(orderId);
+      if (orderIssue === 'empty') errors.orderId = '請輸入訂單編號';
+      else if (orderIssue === 'digits') errors.orderId = '請輸入完整訂單編號，需包含英文字母開頭';
+      else if (orderIssue === 'format') errors.orderId = '訂單編號格式錯誤，應為 2 碼英文開頭加 10～11 位數字（例如 LU1187207774）';
     }
 
     if (d.privacyConsent !== true) errors.privacyConsent = '要勾選同意個資聲明才能參加抽獎喔';
@@ -354,6 +407,7 @@
     ORDER_ID_RE: ORDER_ID_RE,
     isValidInvoice: isValidInvoice,
     normalizeInvoice: normalizeInvoice,
+    invoiceAlreadyUsed: invoiceAlreadyUsed,
     isValidOrderId: isValidOrderId,
     normalizeOrderId: normalizeOrderId,
     canonicalOrderChannel: canonicalOrderChannel,

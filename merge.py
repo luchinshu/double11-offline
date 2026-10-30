@@ -59,11 +59,24 @@ def _taiwan_mobile_national(s):
 def norm_email(s):
     return str(s or "").strip().lower()
 
+def _half_width(s):
+    out = []
+    for ch in str(s or ""):
+        code = ord(ch)
+        if 0xFF01 <= code <= 0xFF5E:
+            out.append(chr(code - 0xFEE0))
+        elif code == 0x3000:
+            out.append(" ")
+        else:
+            out.append(ch)
+    return "".join(out)
+
 def norm_invoice(s):
-    return re.sub(r"-", "", str(s or "").strip().upper())
+    return re.sub(r"[\s\-–—]", "", _half_width(s)).upper()
 
 def norm_order_id(s):
-    return str(s or "").strip().upper()
+    t = re.sub(r"[\s\-–—]", "", _half_width(s)).upper()
+    return re.sub(r"AP\d+$", "", t)
 
 def dedupe_keys(e):
     ks = []

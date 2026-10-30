@@ -129,12 +129,32 @@
   }
 
   // 一律先存 localStorage（店機留底，admin.html 可下載）
+  function knownSyncedInvoices() {
+    var out = [];
+    try {
+      var arr = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+      if (!Array.isArray(arr)) return out;
+      arr.forEach(function (e) {
+        if (e && e.sheetSynced && e.invoice) out.push(e.invoice);
+      });
+    } catch (e) {}
+    return out;
+  }
+  function markSheetSynced(index) {
+    try {
+      var arr = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+      if (!Array.isArray(arr) || !arr[index]) return;
+      arr[index].sheetSynced = true;
+      localStorage.setItem(LS_KEY, JSON.stringify(arr));
+    } catch (e) {}
+  }
   function saveLocal(entry) {
     var arr = [];
     try { arr = JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch (e) { arr = []; }
     if (!Array.isArray(arr)) arr = [];
     arr.push(entry);
     localStorage.setItem(LS_KEY, JSON.stringify(arr));
+    return arr.length - 1;
   }
 
   // text/plain 避免 preflight。cors 才讀得到 JSON；讀不到就不要假裝試算表已寫入。
@@ -245,7 +265,7 @@
     ev.preventDefault();
     clearErrors();
     var data = readForm();
-    var result = V.validateForm(data);
+    var result = V.validateForm(data, { invoices: knownSyncedInvoices() });
     if (!result.ok) { showErrors(result.errors); return; }
 
     var isOnline = data.channel === 'online';
@@ -257,8 +277,8 @@
       amount: Number(String(data.amount).replace(/,/g, '')),
       platform: data.platform,
       account: data.account.trim(),
-      invoice: isOnline ? '' : data.invoice.trim(),
-      orderId: isOnline ? data.orderId.trim() : '',
+      invoice: isOnline ? '' : V.normalizeInvoice(data.invoice),
+      orderId: isOnline ? V.normalizeOrderId(data.orderId) : '',
       orderChannel: isOnline ? (data.orderChannel || '官網') : '',
       channel: isOnline ? 'online' : 'store',
       privacyConsent: true,
@@ -269,8 +289,9 @@
 
     submitBtn.disabled = true;
     submitBtn.textContent = '送出中…';
-    saveLocal(entry); // 本機留底；試算表沒寫入成功也不會當成登記完成
+    var localIndex = saveLocal(entry); // 本機留底；試算表沒寫入成功也不會當成登記完成
     sendToGas(entry).then(function () {
+      markSheetSynced(localIndex);
       showSuccess(entry.platform);
     }).catch(function (err) {
       showSyncError(err);

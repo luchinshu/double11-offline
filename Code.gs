@@ -17,8 +17,6 @@ var HARDCODED_SHEET_ID = '1xFeTyFWZh_8bd2GVP0-G28TJBrl1vGrmXHuwI0HWe7M';
 // 既有欄位順序不動；新欄位接在後面，避免洗掉已寫入的列。
 var HEADERS = ['提交時間', '姓名', 'Email', '電話', '消費金額', '平台', '帳號名稱', '發票號碼', '行銷同意', '門市', '來源', '重複標記', '通路類型', '購買通路', '訂單編號'];
 
-var INVOICE_RE = /^[A-Za-z]{2}-?[0-9]{8}$/;
-var ORDER_ID_RE = /^[A-Za-z0-9][A-Za-z0-9\-_]{3,39}$/;
 var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 // 若用獨立指令碼（未綁定試算表），在「指令碼屬性」設定 SHEET_ID 即可
@@ -58,6 +56,9 @@ function doPost(e) {
     var normOrder = channel === 'online' ? normOrderId_(data.orderId) : '';
     var normPh = normPhone_(data.phone);
     var normEm = String(data.email).trim().toLowerCase();
+    if (normInv && invoiceAlreadyOnSheet_(sh, idx, normInv)) {
+      return json_({ ok: false, errors: ['此發票號碼已被登錄，每張發票限登錄一次'] });
+    }
     var dup = findDuplicate_(sh, idx, normInv, normPh, normEm, normOrder);
     var row = buildRow_(col.names, idx, data, channel, dup);
 
@@ -94,14 +95,14 @@ function buildRow_(names, idx, data, channel, dup) {
   put_(row, idx, '消費金額', amount);
   put_(row, idx, '平台', String(data.platform).toUpperCase() === 'FB' ? 'FB' : 'IG');
   put_(row, idx, '帳號名稱', String(data.account).trim());
-  put_(row, idx, '發票號碼', channel === 'store' ? String(data.invoice || '').trim() : '');
+  put_(row, idx, '發票號碼', channel === 'store' ? normInvoice_(data.invoice) : '');
   put_(row, idx, '行銷同意', data.marketing === true || String(data.marketing) === 'true' ? '同意' : '');
   put_(row, idx, '門市', channel === 'store' ? String(data.store || '').trim() : '');
   put_(row, idx, '來源', sourceOf_(data, channel));
   put_(row, idx, '重複標記', dup ? '重複：' + dup : '');
   put_(row, idx, '通路類型', channel === 'online' ? '線上' : '門市');
   put_(row, idx, '購買通路', channel === 'online' ? canonicalOrderChannel_(data.orderChannel) : '');
-  put_(row, idx, '訂單編號', channel === 'online' ? String(data.orderId || '').trim() : '');
+  put_(row, idx, '訂單編號', channel === 'online' ? normOrderId_(data.orderId) : '');
   return row;
 }
 
@@ -131,8 +132,34 @@ function canonicalOrderChannel_(v) {
 }
 
 function isValidOrderId_(v) {
-  var t = String(v || '').trim();
-  return ORDER_ID_RE.test(t) && /[0-9]/.test(t);
+  return orderIdError_(v) === '';
+}
+function orderIdError_(v) {
+  if (!String(v || '').trim()) return '請輸入訂單編號';
+  var norm = normOrderId_(v);
+  if (/^\d+$/.test(norm)) return '請輸入完整訂單編號，需包含英文字母開頭';
+  if (!/^[A-Z]{2}\d{10,11}$/.test(norm)) return '訂單編號格式錯誤，應為 2 碼英文開頭加 10～11 位數字（例如 LU1187207774）';
+  return '';
+}
+function invoiceError_(v) {
+  if (!String(v || '').trim()) return '請輸入發票號碼';
+  var norm = normInvoice_(v);
+  if (!/^[A-Z]{2}\d{8}$/.test(norm)) return '發票號碼格式錯誤，應為 2 碼英文字母加 8 碼數字（例如 AB12345678）';
+  if (fakeInvoiceDigits_(norm.substring(2))) return '發票號碼無效，請依實際收據填寫';
+  return '';
+}
+function fakeInvoiceDigits_(digits) {
+  if (!/^\d{8}$/.test(digits)) return false;
+  if (/^(\d)\1{7}$/.test(digits)) return true;
+  if (digits === '12345678') return false;
+  var asc = true;
+  var desc = true;
+  for (var i = 1; i < 8; i++) {
+    var diff = digits.charCodeAt(i) - digits.charCodeAt(i - 1);
+    if (diff !== 1) asc = false;
+    if (diff !== -1) desc = false;
+  }
+  return asc || desc;
 }
 
 // ---- 伺服器端驗證（與前端 validate.js 同一套規則）----------------------
@@ -150,21 +177,47 @@ function validate_(d) {
   if (!String(d.account || '').trim()) errors.push('帳號名稱必填');
   if (!channel) errors.push('請選擇線下門市或線上訂單');
   else if (channel === 'store') {
-    if (!INVOICE_RE.test(String(d.invoice || '').trim())) errors.push('發票號碼格式錯誤（2 碼英文＋8 碼數字）');
+    var invErr = invoiceError_(d.invoice);
+    if (invErr) errors.push(invErr);
   } else {
     if (!canonicalOrderChannel_(d.orderChannel)) errors.push('線上訂單僅限官網購買才可參加');
-    if (!isValidOrderId_(d.orderId)) errors.push('訂單編號格式錯誤（4 碼以上英數，且要有數字）');
+    var orderErr = orderIdError_(d.orderId);
+    if (orderErr) errors.push(orderErr);
   }
   if (d.privacyConsent !== true && String(d.privacyConsent) !== 'true') errors.push('未同意個資聲明');
   return errors;
 }
 
 // ---- 正規化（與 validate.js / merge.py 一致，三方比對結果才會相同）----
+function toHalfWidth_(s) {
+  return String(s || '').replace(/[\uFF01-\uFF5E]/g, function (ch) {
+    return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0);
+  }).replace(/\u3000/g, ' ');
+}
 function normInvoice_(v) {
-  return String(v || '').trim().toUpperCase().replace(/-/g, '');
+  return toHalfWidth_(String(v || '')).toUpperCase().replace(/[\s\-–—]/g, '');
 }
 function normOrderId_(v) {
-  return String(v || '').trim().toUpperCase();
+  var t = toHalfWidth_(String(v || '')).toUpperCase().replace(/[\s\-–—]/g, '');
+  return t.replace(/AP\d+$/, '');
+}
+function invoiceAlreadyUsed_(existingRaw, normInv) {
+  if (!normInv) return false;
+  for (var i = 0; i < (existingRaw || []).length; i++) {
+    if (normInvoice_(existingRaw[i]) === normInv) return true;
+  }
+  return false;
+}
+function invoiceAlreadyOnSheet_(sh, idx, normInv) {
+  if (!normInv) return false;
+  var col = idx['發票號碼'];
+  if (col == null || col < 0) return false;
+  var last = sh.getLastRow();
+  if (last < 2) return false;
+  var values = sh.getRange(2, col + 1, last - 1, 1).getValues();
+  var list = [];
+  for (var i = 0; i < values.length; i++) list.push(values[i][0]);
+  return invoiceAlreadyUsed_(list, normInv);
 }
 function phoneDigits_(v) {
   return String(v || '').replace(/[^0-9]/g, '');
