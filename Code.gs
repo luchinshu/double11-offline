@@ -3,7 +3,7 @@
  *
  * 功能：表單（index.html）送出後，以 POST 寫入試算表「線下登記」分頁。
  *  線下門市：發票必填（2 碼英文＋8 碼數字），訂單編號留白。
- *  線上訂單：不收發票（留白），改必填購買通路（官網／蝦皮／momo）與訂單編號。
+ *  線上訂單：不收發票（留白），改必填購買通路（僅官網；蝦皮／momo 不參加）與訂單編號。
  *  - 自動建立分頁；舊表頭保留，缺的欄位補在後面（通路類型、購買通路、訂單編號）
  *  - 伺服器端驗證與前端 validate.js 同一套規則
  *  - 重複比對：電話、Email、有填的發票、有填的訂單編號（訂單編號 trim 後轉大寫）
@@ -122,9 +122,8 @@ function sourceOf_(d, channel) {
 
 function canonicalOrderChannel_(v) {
   var t = String(v || '').trim();
+  // 本次活動線上僅限官網；蝦皮／momo 不參加
   if (t === '官網') return '官網';
-  if (t === '蝦皮') return '蝦皮';
-  if (t.toLowerCase() === 'momo') return 'momo';
   return '';
 }
 
@@ -150,7 +149,7 @@ function validate_(d) {
   else if (channel === 'store') {
     if (!INVOICE_RE.test(String(d.invoice || '').trim())) errors.push('發票號碼格式錯誤（2 碼英文＋8 碼數字）');
   } else {
-    if (!canonicalOrderChannel_(d.orderChannel)) errors.push('購買通路須為官網、蝦皮或 momo');
+    if (!canonicalOrderChannel_(d.orderChannel)) errors.push('線上訂單僅限官網購買才可參加');
     if (!isValidOrderId_(d.orderId)) errors.push('訂單編號格式錯誤（4 碼以上英數，且要有數字）');
   }
   if (d.privacyConsent !== true && String(d.privacyConsent) !== 'true') errors.push('未同意個資聲明');

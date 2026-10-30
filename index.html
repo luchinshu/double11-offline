@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261029j">
+<link rel="stylesheet" href="style.css?v=20261030a">
 </head>
 <body>
 
@@ -62,7 +62,7 @@
         <li>登記至 <strong>2026/11/30</strong> 止</li>
         <li>抽獎日：<strong>2026/12/9</strong></li>
         <li>中獎以 <strong>Email 及 FB／IG 私訊</strong>通知</li>
-        <li>門市結帳，或官網／蝦皮／momo 下單，都可以參加</li>
+        <li>門市結帳，或官網下單，都可以參加（蝦皮、momo 不適用）</li>
         <li>同一位顧客<strong>限參加一次</strong>，重複登記僅計一筆</li>
       </ul>
     </section>
@@ -109,21 +109,9 @@
         </div>
 
         <div class="field full" id="orderChannelField" hidden>
-          <span class="main" id="orderChannelLabel">購買通路 <span class="req">*</span></span>
-          <div class="platform-row order-channel-row" role="radiogroup" aria-labelledby="orderChannelLabel">
-            <span>
-              <input type="radio" id="ocWeb" name="orderChannel" value="官網">
-              <label class="pill" for="ocWeb">官網</label>
-            </span>
-            <span>
-              <input type="radio" id="ocShopee" name="orderChannel" value="蝦皮">
-              <label class="pill" for="ocShopee">蝦皮</label>
-            </span>
-            <span>
-              <input type="radio" id="ocMomo" name="orderChannel" value="momo">
-              <label class="pill" for="ocMomo">momo</label>
-            </span>
-          </div>
+          <span class="main" id="orderChannelLabel">購買通路</span>
+          <p class="channel-tip">線上訂單僅限<strong>官網</strong>（chinshu.co）購買才可參加；蝦皮、momo 不適用本次活動。</p>
+          <input type="hidden" id="ocWeb" name="orderChannel" value="官網">
           <div class="field-error" data-err-for="orderChannel"></div>
         </div>
 
@@ -238,8 +226,8 @@
   </main>
 </div>
 
-<script src="validate.js?v=20261029j"></script>
-<script src="config.js?v=20261029j"></script>
-<script src="app.js?v=20261029j"></script>
+<script src="validate.js?v=20261030a"></script>
+<script src="config.js?v=20261030a"></script>
+<script src="app.js?v=20261030a"></script>
 </body>
 </html>

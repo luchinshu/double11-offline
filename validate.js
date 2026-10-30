@@ -43,9 +43,8 @@
   }
   function canonicalOrderChannel(v) {
     var t = trim(v);
+    // 本次活動線上僅限官網；蝦皮／momo 不參加
     if (t === '官網') return '官網';
-    if (t === '蝦皮') return '蝦皮';
-    if (t.toLowerCase() === 'momo') return 'momo';
     return '';
   }
 
@@ -135,7 +134,7 @@
       if (!invoice) errors.invoice = '請填發票號碼，例：AB12345678';
       else if (!isValidInvoice(invoice)) errors.invoice = '發票號碼格式是 2 碼英文＋8 碼數字，例：AB12345678';
     } else if (channel === 'online') {
-      if (!orderChannel) errors.orderChannel = '請選購買通路：官網、蝦皮或 momo';
+      if (!orderChannel) errors.orderChannel = '線上訂單僅限官網購買才可參加';
       if (!orderId) errors.orderId = '請填訂單編號，線上訂單不用發票喔';
       else if (!isValidOrderId(orderId)) errors.orderId = '訂單編號請填訂單頁上的編號（4 碼以上，要有數字）';
     }

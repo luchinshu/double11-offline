@@ -38,7 +38,12 @@
   }
   function checkedPlatform() { return checkedValue('platform'); }
   function checkedChannel() { return checkedValue('channel'); }
-  function checkedOrderChannel() { return checkedValue('orderChannel'); }
+  function checkedOrderChannel() {
+    // 線上僅限官網；hidden input 或單一選項
+    var el = form.querySelector('input[name="orderChannel"]:checked')
+      || form.querySelector('input[name="orderChannel"]');
+    return el ? el.value : '官網';
+  }
 
   function syncChannel() {
     var ch = checkedChannel();
@@ -47,7 +52,7 @@
     if (orderIdField) orderIdField.hidden = ch !== 'online';
     if (channelTip) {
       if (ch === 'store') channelTip.textContent = '門市結帳的話，請填下面的發票號碼。';
-      else if (ch === 'online') channelTip.textContent = '線上訂單不用發票，改填購買通路和訂單編號就好。';
+      else if (ch === 'online') channelTip.textContent = '線上僅限官網（chinshu.co），填訂單編號即可；蝦皮、momo 不適用。';
       else channelTip.textContent = '先選一種，下面要填的欄位會跟著換。';
     }
     var badge = document.getElementById('storeBadge');
@@ -198,7 +203,7 @@
       account: data.account.trim(),
       invoice: isOnline ? '' : data.invoice.trim(),
       orderId: isOnline ? data.orderId.trim() : '',
-      orderChannel: isOnline ? data.orderChannel : '',
+      orderChannel: isOnline ? (data.orderChannel || '官網') : '',
       channel: isOnline ? 'online' : 'store',
       privacyConsent: true,
       marketing: data.marketing === true,
