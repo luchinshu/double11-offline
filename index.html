@@ -8,12 +8,56 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261030c">
+<link rel="stylesheet" href="style.css?v=20261030d">
+<script>
+/* 有 ?channel= 時先標記，避免掃碼深連結先閃過選擇畫面。別名與 validate.js resolveChannel 一致。 */
+(function () {
+  var q = location.search.charAt(0) === '?' ? location.search.slice(1) : location.search;
+  if (!q) return;
+  var raw = '';
+  var parts = q.split('&');
+  for (var i = 0; i < parts.length; i++) {
+    var pair = parts[i];
+    if (!pair) continue;
+    var eq = pair.indexOf('=');
+    var k = eq < 0 ? pair : pair.slice(0, eq);
+    try { k = decodeURIComponent(k.replace(/\+/g, ' ')); } catch (e) {}
+    if (k !== 'channel') continue;
+    raw = eq < 0 ? '' : pair.slice(eq + 1);
+    try { raw = decodeURIComponent(raw.replace(/\+/g, ' ')); } catch (e2) {}
+    break;
+  }
+  raw = (raw || '').replace(/^\s+|\s+$/g, '');
+  var cl = raw.toLowerCase();
+  var known = cl === 'online' || raw === '線上' || raw === '線上訂單' ||
+    cl === 'store' || cl === 'offline' || raw === '門市' || raw === '線下' || raw === '線下門市';
+  if (known) document.documentElement.classList.add('channel-preset');
+})();
+</script>
 </head>
 <body>
 
 <div class="page">
 
+  <section class="gate" id="channelGate" aria-label="選擇購買管道">
+    <h1 class="sr-only">盧琴樹 LUCHINSHU 雙11抽獎登記</h1>
+    <div class="gate-logo" aria-hidden="true">
+      <img src="assets/hero-promo.jpg?v=20261029e" alt="">
+    </div>
+    <div class="gate-actions">
+      <button type="button" class="gate-btn" data-channel="store">
+        <span class="gate-btn-title">線下門市</span>
+        <span class="gate-btn-sub">填發票號碼</span>
+      </button>
+      <button type="button" class="gate-btn gate-btn-line" data-channel="online">
+        <span class="gate-btn-title">線上訂單</span>
+        <span class="gate-btn-sub">僅限官網・填訂單編號</span>
+      </button>
+    </div>
+    <noscript class="gate-noscript">請開啟 JavaScript 才能完成登記。</noscript>
+  </section>
+
+  <div id="campaign">
   <!-- 1. 海報 hero（手機寬滿版） -->
   <header class="hero">
     <img src="assets/hero-promo.jpg?v=20261029e" alt="盧琴樹 雙11大獎開抽!! iPhone 18 Pro 256GB（價值約 NT$44,900）等你帶回家，即日起至11/30 消費滿$1111＋留言" class="hero-img">
@@ -80,7 +124,7 @@
     <!-- 填寫畫面 -->
     <section class="card form-card" id="formCard">
       <h2 class="form-title"><svg class="title-ic" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>抽獎登記</h2>
-      <p class="form-hint">先選門市還是線上訂單，填完送出就會帶你去留言。記得打「我要吃糖心酥」！</p>
+      <p class="form-hint">填完送出就會帶你去留言。記得打「我要吃糖心酥」！管道不對可以改上面的選項。</p>
 
       <div class="form-error" id="formError"></div>
 
@@ -224,10 +268,11 @@
       活動期間 2026/10/30–11/30・抽獎日 2026/12/9・主辦方保有審核及最終解釋之權利
     </footer>
   </main>
+  </div>
 </div>
 
 <script src="validate.js?v=20261030c"></script>
 <script src="config.js?v=20261030c"></script>
-<script src="app.js?v=20261030c"></script>
+<script src="app.js?v=20261030d"></script>
 </body>
 </html>

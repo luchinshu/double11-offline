@@ -51,8 +51,8 @@
     if (orderChannelField) orderChannelField.hidden = ch !== 'online';
     if (orderIdField) orderIdField.hidden = ch !== 'online';
     if (channelTip) {
-      if (ch === 'store') channelTip.textContent = '門市結帳的話，請填下面的發票號碼。';
-      else if (ch === 'online') channelTip.textContent = '線上僅限官網（chinshu.co），填訂單編號即可；蝦皮、momo 不適用。';
+      if (ch === 'store') channelTip.textContent = '請填門市發票號碼。要改成線上訂單，點上面另一個。';
+      else if (ch === 'online') channelTip.textContent = '線上僅限官網（chinshu.co），填訂單編號即可；蝦皮、momo 不適用。要改成門市，點上面另一個。';
       else channelTip.textContent = '先選一種，下面要填的欄位會跟著換。';
     }
     var badge = document.getElementById('storeBadge');
@@ -62,10 +62,29 @@
     }
   }
 
+  function revealCampaign(ch, scrollToForm) {
+    if (ch === 'online') document.getElementById('chOnline').checked = true;
+    else if (ch === 'store') document.getElementById('chStore').checked = true;
+    syncChannel();
+    document.documentElement.classList.add('channel-open');
+    if (!scrollToForm) return;
+    var card = document.getElementById('formCard');
+    if (!card || !card.scrollIntoView) return;
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    card.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+  }
+
+  // ?channel= 或 config 已決定管道時直接進表單，QR 深連結不用再點一次
   var preset = V.resolveChannel({ channel: cfg.CHANNEL || '' });
-  if (preset === 'online') document.getElementById('chOnline').checked = true;
-  else if (preset === 'store') document.getElementById('chStore').checked = true;
-  syncChannel();
+  if (preset === 'online' || preset === 'store') revealCampaign(preset, false);
+
+  Array.prototype.forEach.call(document.querySelectorAll('.gate-btn'), function (btn) {
+    btn.addEventListener('click', function () {
+      var ch = V.resolveChannel({ channel: btn.getAttribute('data-channel') || '' });
+      if (ch !== 'store' && ch !== 'online') return;
+      revealCampaign(ch, true);
+    });
+  });
 
   form.addEventListener('change', function (ev) {
     if (ev.target && ev.target.name === 'channel') {
