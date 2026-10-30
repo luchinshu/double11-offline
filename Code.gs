@@ -26,11 +26,15 @@ var PHONE_RE = /^[0-9+\-\s()]{8,15}$/;
 function getSpreadsheet_() {
   var props = PropertiesService.getScriptProperties();
   var id = props.getProperty('SHEET_ID') || HARDCODED_SHEET_ID;
+  var ss;
   try {
-    return SpreadsheetApp.openById(id);
+    ss = SpreadsheetApp.openById(id);
   } catch (e) {
-    return SpreadsheetApp.getActiveSpreadsheet();
+    ss = SpreadsheetApp.getActiveSpreadsheet();
   }
+  // 每次寫入都設一次，避免試算表時區被改回美國後又把晚上顯示成上午。
+  ss.setSpreadsheetTimeZone('Asia/Taipei');
+  return ss;
 }
 
 function doGet() {
@@ -84,7 +88,7 @@ function channelOf_(d) {
 function buildRow_(names, idx, data, channel, dup) {
   var amount = Number(String(data.amount != null ? data.amount : '').replace(/,/g, ''));
   var row = blankRow_(names.length);
-  put_(row, idx, '提交時間', new Date());
+  put_(row, idx, '提交時間', Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss'));
   put_(row, idx, '姓名', String(data.name).trim());
   put_(row, idx, 'Email', String(data.email).trim().toLowerCase());
   put_(row, idx, '電話', String(data.phone).trim());
