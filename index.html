@@ -10,6 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
 <!-- assets 20261030f: channel is locked after the gate; no in-form switch -->
 <!-- assets 20261030g: 試算表回 ok 才顯示登記成功 -->
+<!-- assets 20261103c: FB/IG in-app browser uses tap-to-open, no auto location.href -->
 <link rel="stylesheet" href="style.css?v=20261030j">
 <script>
 /* 有 ?channel= 時先標記，避免掃碼深連結先閃過選擇畫面。別名與 validate.js resolveChannel 一致。 */
@@ -240,8 +241,8 @@
       <p class="success-text">接下來最重要的一步：<strong>請到活動貼文留言</strong>，有留言才會進入抽獎名單！</p>
       <p class="success-phrase">留言打這句就對了：「我要吃糖心酥」</p>
       <p class="success-text">小編是用「FB／IG 帳號」對名單的，留言帳號要和剛剛填的一樣喔。</p>
-      <p class="countdown" id="countdownText">活動貼文還沒上線時，不會自動跳轉。</p>
-      <a class="btn btn-gold" id="goPostBtn" href="#" target="_blank" rel="noopener">馬上去貼文留言</a>
+      <p class="countdown" id="countdownText" aria-live="polite">活動貼文還沒上線時，不會自動跳轉。</p>
+      <a class="btn btn-gold" id="goPostBtn" target="_blank" rel="noopener noreferrer">馬上去貼文留言</a>
       <div class="follow-box">
         <p class="follow-title">順便追蹤粉專／IG 吧！</p>
         <p class="follow-text">中獎名單會在那邊公布，追蹤才能第一時間知道有沒有中獎 ✨</p>
@@ -260,8 +261,8 @@
   </div>
 </div>
 
-<script src="validate.js?v=20261030j"></script>
-<script src="config.js?v=20261103b"></script>
-<script src="app.js?v=20261030j"></script>
+<script src="validate.js?v=20261103c"></script>
+<script src="config.js?v=20261103c"></script>
+<script src="app.js?v=20261103c"></script>
 </body>
 </html>
