@@ -254,6 +254,45 @@
     return String(platform).toUpperCase() === 'FB' ? config.FB_POST_URL : config.IG_POST_URL;
   }
 
+  // 絕對 https 才當活動貼文。#、相對路徑、http、example.com 都不拿來跳轉。
+  function isRealPostUrl(url) {
+    if (url == null) return false;
+    var u = String(url).trim();
+    if (!u) return false;
+    if (/example\.com/i.test(u)) return false;
+    if (/placeholder/i.test(u)) return false;
+    return /^https:\/\/.+/i.test(u);
+  }
+
+  // Facebook／Instagram／Messenger App 內建瀏覽器。自動 location 到同 App 的網址常被擋，
+  // 失敗時位址列會只剩外部網站的網域，看起來像跑去站台根目錄。
+  function isMetaInAppBrowser(ua) {
+    var s = String(ua || '');
+    if (/Instagram/i.test(s)) return true;
+    if (/FB_IAB|FBAN|FBAV|FBIOS|FB4A|Messenger/i.test(s)) return true;
+    return false;
+  }
+
+  function metaPostHost(url) {
+    var m = String(url || '').trim().match(/^https:\/\/([^\/?#]+)/i);
+    if (!m) return '';
+    var host = m[1].toLowerCase();
+    var colon = host.indexOf(':');
+    if (colon >= 0) host = host.slice(0, colon);
+    if (host.slice(-1) === '.') host = host.slice(0, -1);
+    if (host === 'facebook.com' || host.slice(-13) === '.facebook.com' || host === 'fb.com' || host.slice(-6) === '.fb.me' || host === 'fb.me') return 'FB';
+    if (host === 'instagram.com' || host.slice(-14) === '.instagram.com' || host === 'instagr.am' || host.slice(-11) === '.instagr.am') return 'IG';
+    return '';
+  }
+
+  // href：按鈕要用的絕對網址（沒有合格貼文就是空字串）。auto：只有一般瀏覽器才倒數後跳轉。
+  function postOpenPlan(url, ua) {
+    var raw = url == null ? '' : String(url).trim();
+    var href = isRealPostUrl(raw) ? raw : '';
+    var auto = href !== '' && !(isMetaInAppBrowser(ua) && metaPostHost(href) !== '');
+    return { href: href, auto: auto };
+  }
+
   // ---- CSV（RFC 4180 簡易版：支援引號、雙引號跳脫、CRLF、BOM）----------
   function parseCsv(text) {
     var t = str(text).replace(/\uFEFF/, ''); // 去 BOM
@@ -421,6 +460,9 @@
     parseQueryString: parseQueryString,
     resolveConfig: resolveConfig,
     pickPostUrl: pickPostUrl,
+    isRealPostUrl: isRealPostUrl,
+    isMetaInAppBrowser: isMetaInAppBrowser,
+    postOpenPlan: postOpenPlan,
     parseCsv: parseCsv,
     toCsv: toCsv,
     csvEscape: csvEscape,

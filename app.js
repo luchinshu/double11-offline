@@ -214,16 +214,29 @@
     if (formError.scrollIntoView) formError.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
-  function isRealPostUrl(url) {
-    if (!url || !String(url).trim()) return false;
-    var u = String(url).trim().toLowerCase();
-    if (u.indexOf('example.com') !== -1) return false;
-    if (u.indexOf('placeholder') !== -1) return false;
-    return /^https?:\/\//i.test(u);
+  // App 內不要承諾「送出就會跳轉」——那個自動跳轉正是會把人丟到壞掉頁面的路徑。
+  if (V.isMetaInAppBrowser(navigator.userAgent)) {
+    var hint = document.querySelector('.form-hint');
+    if (hint) hint.textContent = '填完送出後，請點按鈕到貼文留言。記得打「我要吃糖心酥」！';
+    var big = document.querySelector('.warn-banner .big');
+    if (big) big.innerHTML = '送出後請點按鈕打開活動貼文，<span class="gold">一定要留言才算參加！</span>';
+  }
+
+  // 沒有合格 https 貼文時，不要讓這個鈕還指著 #
+  if (goPostBtn) {
+    goPostBtn.addEventListener('click', function (ev) {
+      if (!V.isRealPostUrl(goPostBtn.getAttribute('href') || '')) ev.preventDefault();
+    });
+  }
+
+  function scrollSuccessIntoView() {
+    if (!successCard || !successCard.scrollIntoView) return;
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    successCard.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
   }
 
   function showSuccess(platform) {
-    var url = V.pickPostUrl(cfg, platform);
+    var plan = V.postOpenPlan(V.pickPostUrl(cfg, platform), navigator.userAgent);
     formCard.style.display = 'none';
     document.querySelector('.warn-banner').style.display = 'none';
     successCard.classList.add('on');
@@ -237,28 +250,38 @@
       followIg.href = cfg.IG_PAGE_URL || 'https://www.instagram.com/luchinshu_/';
       followIg.textContent = '追蹤 ' + (cfg.IG_PAGE_LABEL || 'IG');
     }
-    if (isRealPostUrl(url)) {
-      goPostBtn.href = url;
+    if (plan.href) {
+      // 倒數或請客人點擊之前，按鈕就必須是絕對 https，不能留在 #
+      goPostBtn.href = plan.href;
+      goPostBtn.target = '_blank';
+      goPostBtn.rel = 'noopener noreferrer';
       goPostBtn.style.display = '';
       goPostBtn.textContent = '馬上去貼文留言';
-      var sec = 3;
       countdownText.style.display = '';
-      countdownText.textContent = sec + ' 秒後自動帶你到貼文…';
-      var timer = setInterval(function () {
-        sec -= 1;
-        if (sec <= 0) {
-          clearInterval(timer);
-          window.location.href = url;
-        } else {
-          countdownText.textContent = sec + ' 秒後自動帶你到貼文…';
-        }
-      }, 1000);
+      if (plan.auto) {
+        var sec = 3;
+        countdownText.textContent = sec + ' 秒後自動帶你到貼文…';
+        var timer = setInterval(function () {
+          sec -= 1;
+          if (sec <= 0) {
+            clearInterval(timer);
+            var href = goPostBtn.getAttribute('href') || '';
+            // 一般瀏覽器才整頁過去。FB／IG App 內改靠上面的 target=_blank，不使用 location.href。
+            if (plan.auto && V.isRealPostUrl(href)) window.location.href = href;
+          } else {
+            countdownText.textContent = sec + ' 秒後自動帶你到貼文…';
+          }
+        }, 1000);
+      } else {
+        countdownText.textContent = '請點下面的按鈕打開貼文留言。在 Facebook／Instagram App 裡不會自動跳轉。';
+      }
     } else {
       goPostBtn.removeAttribute('href');
       goPostBtn.style.display = 'none';
       countdownText.style.display = '';
       countdownText.textContent = '活動貼文還沒上線，先追蹤粉專／IG，貼文一發就能去留言！';
     }
+    scrollSuccessIntoView();
   }
 
   form.addEventListener('submit', function (ev) {

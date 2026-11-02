@@ -185,6 +185,50 @@ t('pickPostUrl 依平台挑貼文', () => {
   assert.strictEqual(V.pickPostUrl(cfg, 'FB'), 'F');
   assert.strictEqual(V.pickPostUrl(cfg, 'IG'), 'I');
 });
+t('活動貼文固定為 lcspastry 永久連結與 IG 短碼', () => {
+  const src = fs.readFileSync(path.join(__dirname, 'config.js'), 'utf8');
+  const fb = 'https://www.facebook.com/lcspastry/posts/1433610702318615/';
+  const ig = 'https://www.instagram.com/p/DfPxwLisrOk/';
+  assert.ok(src.indexOf("FB_POST_URL: '" + fb + "'") >= 0);
+  assert.ok(src.indexOf("IG_POST_URL: '" + ig + "'") >= 0);
+  assert.ok(src.indexOf('/100070090958975/posts/') < 0);
+});
+t('postOpenPlan：一般瀏覽器倒數後跳轉，按鈕用絕對 https', () => {
+  const fb = 'https://www.facebook.com/lcspastry/posts/1433610702318615/';
+  const ig = 'https://www.instagram.com/p/DfPxwLisrOk/';
+  const safari = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
+  const chrome = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36';
+  assert.deepStrictEqual(V.postOpenPlan(fb, safari), { href: fb, auto: true });
+  assert.deepStrictEqual(V.postOpenPlan(ig, chrome), { href: ig, auto: true });
+  assert.deepStrictEqual(V.postOpenPlan('  ' + fb + ' ', safari), { href: fb, auto: true });
+  assert.strictEqual(V.isMetaInAppBrowser(safari), false);
+});
+t('postOpenPlan：FB／IG App 內不自動跳進 facebook.com／instagram.com', () => {
+  const fb = 'https://www.facebook.com/lcspastry/posts/1433610702318615/';
+  const ig = 'https://www.instagram.com/p/DfPxwLisrOk/';
+  const fbIos = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/21F90 [FBAN/FBIOS;FBAV/490.0.0.0.0;]';
+  const fbAnd = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/120.0.0.0 Mobile Safari/537.36 [FB_IAB/FB4A;FBAV/490.0.0.0.0;]';
+  const igIos = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 350.0.0.0.0';
+  const igAnd = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36 Instagram 350.0.0.0.0';
+  const messenger = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 [FBAN/MessengerForiOS;FBAV/440.0.0.0.0;]';
+  [fbIos, fbAnd, igIos, igAnd, messenger].forEach(function (ua) {
+    assert.deepStrictEqual(V.postOpenPlan(fb, ua), { href: fb, auto: false }, ua);
+    assert.deepStrictEqual(V.postOpenPlan(ig, ua), { href: ig, auto: false }, ua);
+    assert.strictEqual(V.isMetaInAppBrowser(ua), true, ua);
+  });
+  assert.strictEqual(V.postOpenPlan('https://m.facebook.com/story.php?story_fbid=1433610702318615&id=100070090958975', fbIos).auto, false);
+  assert.strictEqual(V.postOpenPlan('https://www.instagr.am/p/DfPxwLisrOk/', igIos).auto, false);
+  assert.deepStrictEqual(V.postOpenPlan('https://chinshu.co/1111', fbIos), { href: 'https://chinshu.co/1111', auto: true });
+});
+t('postOpenPlan：沒有合格 https 就不給網址、也不跳轉', () => {
+  const safari = 'Safari';
+  assert.deepStrictEqual(V.postOpenPlan('', safari), { href: '', auto: false });
+  assert.deepStrictEqual(V.postOpenPlan('#', safari), { href: '', auto: false });
+  assert.deepStrictEqual(V.postOpenPlan('https://example.com/post', safari), { href: '', auto: false });
+  assert.deepStrictEqual(V.postOpenPlan('/double11-offline/', safari), { href: '', auto: false });
+  assert.deepStrictEqual(V.postOpenPlan('http://www.facebook.com/lcspastry/posts/1433610702318615/', safari), { href: '', auto: false });
+  assert.strictEqual(V.isRealPostUrl('https://www.facebook.com/lcspastry/posts/1433610702318615/'), true);
+});
 
 console.log('validate.js：CSV');
 t('parseCsv 支援引號、跳脫、CRLF、BOM', () => {
@@ -554,14 +598,26 @@ t('admin.html 以共用名單為主、本機暫存為輔', () => {
   assert.ok(html.indexOf('共用名單') >= 0);
   assert.ok(html.indexOf('本機暫存') >= 0);
   assert.ok(html.indexOf('action=list') >= 0);
-  assert.ok(html.indexOf('config.js?v=20261102a') >= 0);
-  assert.ok(html.indexOf('validate.js?v=20261102a') >= 0);
+  assert.ok(html.indexOf('config.js?v=20261103c') >= 0);
+  assert.ok(html.indexOf('validate.js?v=20261103c') >= 0);
   assert.ok(html.indexOf('style.css?v=20261102a') >= 0);
   assert.ok(html.indexOf('重複標記') >= 0);
   assert.ok(html.indexOf('id="btnRefresh"') >= 0);
   const sharedAt = html.indexOf('共用名單');
   const localAt = html.indexOf('本機暫存');
   assert.ok(sharedAt >= 0 && localAt > sharedAt);
+});
+t('登記頁成功按鈕不預先指到 #，腳本版號已更新', () => {
+  const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  assert.ok(html.indexOf('id="goPostBtn"') >= 0);
+  assert.ok(html.indexOf('goPostBtn" href="#"') < 0);
+  assert.ok(html.indexOf('href="#" target="_blank" rel="noopener">馬上去貼文留言') < 0);
+  assert.ok(html.indexOf('app.js?v=20261103c') >= 0);
+  assert.ok(html.indexOf('validate.js?v=20261103c') >= 0);
+  assert.ok(html.indexOf('config.js?v=20261103c') >= 0);
+  const app = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
+  assert.ok(app.indexOf('postOpenPlan') >= 0);
+  assert.ok(app.indexOf('if (plan.auto && V.isRealPostUrl(href)) window.location.href = href;') >= 0);
 });
 
 console.log(process.exitCode ? '\n有測試失敗' : '\n全部 ' + passed + ' 項測試通過 ✓');
