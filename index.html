@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
 <!-- assets 20261030f: channel is locked after the gate; no in-form switch -->
 <!-- assets 20261030g: 試算表回 ok 才顯示登記成功 -->
-<link rel="stylesheet" href="style.css?v=20261030g">
+<link rel="stylesheet" href="style.css?v=20261030j">
 <script>
 /* 有 ?channel= 時先標記，避免掃碼深連結先閃過選擇畫面。別名與 validate.js resolveChannel 一致。 */
 (function () {
@@ -150,8 +150,8 @@
 
         <div class="field full" id="orderIdField" hidden>
           <label class="main" for="fOrderId">訂單編號 <span class="req">*</span></label>
-          <input type="text" id="fOrderId" name="orderId" autocapitalize="characters" autocomplete="off" placeholder="例：2026103000123">
-          <p class="channel-tip">線上訂單不用填發票（發票開比較慢），填訂單編號就能參加抽獎喔。</p>
+          <input type="text" id="fOrderId" name="orderId" autocapitalize="characters" autocomplete="off" placeholder="例：LU1187207774">
+          <p class="channel-tip">官網訂單編號是 2～3 碼英文加 9～11 個數字，例如 LU1187207774。後面如果有 AP 付款編號，也可以整串貼上。</p>
           <div class="field-error" data-err-for="orderId"></div>
         </div>
 
@@ -168,7 +168,7 @@
         </div>
 
         <div class="field">
-          <label class="main" for="fPhone">電話 <span class="req">*</span></label>
+          <label class="main" for="fPhone">台灣手機 <span class="req">*</span></label>
           <input type="tel" id="fPhone" name="phone" autocomplete="tel" inputmode="tel" placeholder="例：0912345678">
           <div class="field-error" data-err-for="phone"></div>
         </div>
@@ -260,8 +260,8 @@
   </div>
 </div>
 
-<script src="validate.js?v=20261030g"></script>
-<script src="config.js?v=20261030g"></script>
-<script src="app.js?v=20261030g"></script>
+<script src="validate.js?v=20261030j"></script>
+<script src="config.js?v=20261030j"></script>
+<script src="app.js?v=20261030j"></script>
 </body>
 </html>
