@@ -17,7 +17,7 @@
  *     &endpoint=https://script.google.com/macros/s/xxxx/exec
  */
 window.LOTTERY_CONFIG = {
-  FB_POST_URL: 'https://www.facebook.com/100070090958975/posts/1433610702318615/',
+  FB_POST_URL: 'https://www.facebook.com/lcspastry/posts/1433610702318615/',
   IG_POST_URL: 'https://www.instagram.com/p/DfPxwLisrOk/',
   DEFAULT_PLATFORM: 'FB',
   // 表單 POST 寫入、管理頁 GET ?action=list 讀「線下登記」。同一個網址，見 DEPLOY.md。
