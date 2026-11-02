@@ -428,4 +428,140 @@ t('寫入列：線上發票留白、門市訂單編號留白，新欄接在舊�
   assert.strictEqual(store[idxOf(merged)['門市']], '誠品台茂店');
 });
 
+console.log('Code.gs：GET ?action=list 唯讀名單');
+gas.ContentService = {
+  MimeType: { JSON: 'application/json', JAVASCRIPT: 'application/javascript' },
+  createTextOutput: function (text) {
+    const out = { _text: String(text), _mime: '' };
+    out.setMimeType = function (m) { out._mime = m; return out; };
+    out.getContent = function () { return out._text; };
+    return out;
+  }
+};
+function installGasSheet(grid) {
+  const writes = [];
+  const sh = {
+    getLastRow: function () { return grid.length; },
+    getLastColumn: function () { return grid[0] ? grid[0].length : 0; },
+    getRange: function (r, c, numRows, numCols) {
+      return {
+        getValues: function () {
+          const out = [];
+          for (let i = 0; i < numRows; i++) {
+            const line = [];
+            const src = grid[r - 1 + i] || [];
+            for (let j = 0; j < numCols; j++) line.push(src[c - 1 + j]);
+            out.push(line);
+          }
+          return out;
+        },
+        setValues: function (v) { writes.push(['setValues', v]); }
+      };
+    },
+    setFrozenRows: function () { writes.push(['freeze']); }
+  };
+  const ss = {
+    getSheetByName: function (name) { return name === '線下登記' ? sh : null; },
+    setSpreadsheetTimeZone: function (tz) { writes.push(['tz', tz]); },
+    insertSheet: function () { writes.push(['insert']); return sh; }
+  };
+  gas.PropertiesService = {
+    getScriptProperties: function () { return { getProperty: function () { return ''; } }; }
+  };
+  gas.SpreadsheetApp = {
+    openById: function () { return ss; },
+    getActiveSpreadsheet: function () { return ss; },
+    flush: function () {}
+  };
+  return writes;
+}
+const ROSTER_HEADERS = ['提交時間', '姓名', 'Email', '電話', '消費金額', '平台', '帳號名稱', '發票號碼', '行銷同意', '門市', '來源', '重複標記', '通路類型', '購買通路', '訂單編號'];
+t('沒有 action 仍回 ok，不開試算表', () => {
+  assert.strictEqual(gas.doGet().getContent(), 'ok');
+  assert.strictEqual(gas.doGet({ parameter: {} }).getContent(), 'ok');
+});
+t('日期轉台北時間、文字時間原樣、重複標記保留、空白列略過，且不寫入', () => {
+  const when = new Date(Date.UTC(2026, 9, 30, 13, 5, 9));
+  assert.strictEqual(gas.Utilities.formatDate(when, 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss'), '2026/10/30 21:05:09');
+  assert.strictEqual(gas.cellText_(when), '2026/10/30 21:05:09');
+  assert.strictEqual(gas.cellText_('2026/11/01 09:08:07'), '2026/11/01 09:08:07');
+  assert.strictEqual(gas.cellText_(1280), '1280');
+  assert.strictEqual(gas.cellText_(null), '');
+  const rowDate = [when, '王小美', 'mei@example.com', '0912345678', 1280, 'IG', 'fan', 'AB12345678', '同意', '誠品台茂店', 'offline-web', '重複：發票', '門市', '', ''];
+  const rowText = ['2026/11/01 09:08:07', '林小安', 'an@example.com', '0988123456', 1111, 'FB', 'an', '', '', '', 'online-web', '', '線上', '官網', 'LU1187207774'];
+  const blank = ROSTER_HEADERS.map(function () { return ''; });
+  const writes = installGasSheet([
+    ROSTER_HEADERS.concat(['']),
+    rowDate.concat([null]),
+    blank.concat([null]),
+    rowText.concat([null])
+  ]);
+  const res = gas.doGet({ parameter: { action: 'list', ts: '1' } });
+  const data = JSON.parse(res.getContent());
+  assert.strictEqual(res._mime, 'application/json');
+  assert.strictEqual(data.ok, true);
+  assert.strictEqual(data.sheet, '線下登記');
+  assert.strictEqual(data.count, 2);
+  assert.deepStrictEqual(data.headers, ROSTER_HEADERS);
+  assert.strictEqual(data.rows[0][0], '2026/10/30 21:05:09');
+  assert.strictEqual(data.rows[0][4], '1280');
+  assert.strictEqual(data.rows[0][11], '重複：發票');
+  assert.strictEqual(data.rows[1][0], '2026/11/01 09:08:07');
+  assert.strictEqual(data.rows[1][9], '');
+  assert.strictEqual(data.rows[1][14], 'LU1187207774');
+  assert.ok(/^\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}$/.test(data.updatedAt));
+  assert.deepStrictEqual(writes, []);
+});
+t('JSONP 只接受安全函式名；讀取失敗不寫表', () => {
+  installGasSheet([ROSTER_HEADERS]);
+  const okp = gas.doGet({ parameter: { action: 'list', callback: 'rosterCb_1' } });
+  assert.strictEqual(okp._mime, 'application/javascript');
+  assert.ok(okp.getContent().indexOf('rosterCb_1(') === 0);
+  assert.ok(okp.getContent().slice(-2) === ');');
+  const payload = JSON.parse(okp.getContent().slice('rosterCb_1('.length, -2));
+  assert.strictEqual(payload.ok, true);
+  assert.strictEqual(payload.count, 0);
+  const bad = gas.doGet({ parameter: { action: 'list', callback: 'alert(1)' } });
+  assert.strictEqual(bad._mime, 'application/json');
+  assert.strictEqual(JSON.parse(bad.getContent()).ok, true);
+  const dotted = gas.doGet({ parameter: { action: 'list', callback: 'a.b' } });
+  assert.strictEqual(JSON.parse(dotted.getContent()).ok, true);
+  gas.SpreadsheetApp.openById = function () { throw new Error('denied'); };
+  gas.SpreadsheetApp.getActiveSpreadsheet = function () { throw new Error('no active'); };
+  const failed = JSON.parse(gas.doGet({ parameter: { action: 'list' } }).getContent());
+  assert.strictEqual(failed.ok, false);
+  assert.ok(failed.errors[0].indexOf('讀取失敗') >= 0);
+});
+t('沒有分頁時回空名單與標準表頭', () => {
+  installGasSheet([ROSTER_HEADERS]);
+  gas.SpreadsheetApp.openById = function () {
+    return { getSheetByName: function () { return null; } };
+  };
+  const data = JSON.parse(gas.doGet({ parameter: { action: 'LIST' } }).getContent());
+  assert.strictEqual(data.ok, true);
+  assert.strictEqual(data.count, 0);
+  assert.ok(data.headers.indexOf('重複標記') >= 0);
+  const shaped = gas.rowsFromValues_(['提交時間', '姓名', ''], [
+    ['2026/11/01 10:00:00', '甲', '忽略沒表頭的欄'],
+    ['', '  ', ''],
+    ['2026/11/01 11:00:00', '乙', '']
+  ]);
+  assert.deepStrictEqual(Array.from(shaped.headers), ['提交時間', '姓名']);
+  assert.strictEqual(shaped.count, 2);
+});
+t('admin.html 以共用名單為主、本機暫存為輔', () => {
+  const html = fs.readFileSync(path.join(__dirname, 'admin.html'), 'utf8');
+  assert.ok(html.indexOf('共用名單') >= 0);
+  assert.ok(html.indexOf('本機暫存') >= 0);
+  assert.ok(html.indexOf('action=list') >= 0);
+  assert.ok(html.indexOf('config.js?v=20261102a') >= 0);
+  assert.ok(html.indexOf('validate.js?v=20261102a') >= 0);
+  assert.ok(html.indexOf('style.css?v=20261102a') >= 0);
+  assert.ok(html.indexOf('重複標記') >= 0);
+  assert.ok(html.indexOf('id="btnRefresh"') >= 0);
+  const sharedAt = html.indexOf('共用名單');
+  const localAt = html.indexOf('本機暫存');
+  assert.ok(sharedAt >= 0 && localAt > sharedAt);
+});
+
 console.log(process.exitCode ? '\n有測試失敗' : '\n全部 ' + passed + ' 項測試通過 ✓');

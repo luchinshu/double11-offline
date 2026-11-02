@@ -7,9 +7,28 @@
  *  - 自動建立分頁；舊表頭保留，缺的欄位補在後面（通路類型、購買通路、訂單編號）
  *  - 伺服器端驗證與前端 validate.js 同一套規則
  *  - 重複比對：電話、Email、有填的發票、有填的訂單編號（訂單編號 trim 後轉大寫）
+ *  - GET ?action=list：唯讀回傳「線下登記」全門市名單（給 admin.html）。不寫入、不帶金鑰。
  *
  * 改版後請用「管理部署」更新現有 Web App 版本（網址不變就不用改 GAS_ENDPOINT）。
  * 部署方式詳見 DEPLOY.md。
+ *
+ * 名單查詢（管理頁用，部署成新版本後才會生效）：
+ *   GET {Web App 網址}?action=list&ts=1730000000000
+ *   → JSON
+ *     {
+ *       "ok": true,
+ *       "sheet": "線下登記",
+ *       "headers": ["提交時間", "姓名", ...],
+ *       "rows": [["2026/11/01 21:05:09", "王小美", ...], ...],
+ *       "count": 1,
+ *       "updatedAt": "2026/11/02 10:15:03"
+ *     }
+ *   日期儲存格轉成台北時間 yyyy/MM/dd HH:mm:ss；試算表裡本來就是文字的時間原樣回傳。
+ *   「重複標記」欄有字就原樣出現在該列。
+ *   可加 &callback=函式名 改回 JSONP（函式名只允許英數與 _ $），給瀏覽器跨網域讀取。
+ *   請每次加不同的 &ts=，避免 Google 把 GET 結果快取成舊名單。
+ *   沒有 action 時仍回純文字 ok（與舊版相同）。
+ *   存取權與表單相同（Web App「所有人」）。這是唯讀、不另設密碼；知道網址就能讀名單。
  */
 
 var SHEET_NAME = '線下登記';
@@ -19,23 +38,128 @@ var HEADERS = ['提交時間', '姓名', 'Email', '電話', '消費金額', '平
 
 var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-// 若用獨立指令碼（未綁定試算表），在「指令碼屬性」設定 SHEET_ID 即可
-function getSpreadsheet_() {
+// 若用獨立指令碼（未綁定試算表），在「指令碼屬性」設定 SHEET_ID 即可。
+// 開表本身不改時區；寫入路徑才會把時區設成台北，避免管理頁每次重新整理都去改試算表。
+function openSpreadsheet_() {
   var props = PropertiesService.getScriptProperties();
   var id = props.getProperty('SHEET_ID') || HARDCODED_SHEET_ID;
-  var ss;
   try {
-    ss = SpreadsheetApp.openById(id);
+    return SpreadsheetApp.openById(id);
   } catch (e) {
-    ss = SpreadsheetApp.getActiveSpreadsheet();
+    return SpreadsheetApp.getActiveSpreadsheet();
   }
+}
+
+function getSpreadsheet_() {
+  var ss = openSpreadsheet_();
   // 每次寫入都設一次，避免試算表時區被改回美國後又把晚上顯示成上午。
   ss.setSpreadsheetTimeZone('Asia/Taipei');
   return ss;
 }
 
-function doGet() {
+function doGet(e) {
+  var action = requestParam_(e, 'action').toLowerCase();
+  if (action === 'list') return listRosterResponse_(e);
   return ContentService.createTextOutput('ok');
+}
+
+/** 唯讀：全門市「線下登記」。不補表頭、不改時區、不寫任何儲存格。 */
+function listRosterResponse_(e) {
+  try {
+    var ss = openSpreadsheet_();
+    var sh = ss.getSheetByName(SHEET_NAME);
+    var roster = readRoster_(sh);
+    roster.ok = true;
+    roster.sheet = SHEET_NAME;
+    roster.updatedAt = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss');
+    return jsonpOrJson_(e, roster);
+  } catch (err) {
+    return jsonpOrJson_(e, { ok: false, errors: ['讀取失敗：' + (err && err.message ? err.message : err)] });
+  }
+}
+
+function readRoster_(sh) {
+  if (!sh) return rowsFromValues_(HEADERS, []);
+  var lastRow = sh.getLastRow();
+  var lastCol = sh.getLastColumn();
+  if (lastRow < 1 || lastCol < 1) return rowsFromValues_(HEADERS, []);
+  var values = sh.getRange(1, 1, lastRow, lastCol).getValues();
+  var header = values.length ? values[0] : [];
+  var data = [];
+  for (var i = 1; i < values.length; i++) data.push(values[i]);
+  return rowsFromValues_(header, data);
+}
+
+/**
+ * 把 getValues() 的表頭與資料轉成名單。
+ * Date 一律格式化成台北時間；文字（含寫入時已存好的台北時間）原樣保留。
+ * 全空白列略過。表頭尾端的空欄去掉，避免多出一欄空白。
+ */
+function rowsFromValues_(headerRow, dataRows) {
+  var headers = [];
+  var raw = headerRow || [];
+  for (var i = 0; i < raw.length; i++) headers.push(cellText_(raw[i]).trim());
+  while (headers.length && !headers[headers.length - 1]) headers.pop();
+  if (!headers.length) headers = HEADERS.slice();
+  var rows = [];
+  var src = dataRows || [];
+  for (var r = 0; r < src.length; r++) {
+    var line = src[r] || [];
+    var row = [];
+    var any = false;
+    for (var c = 0; c < headers.length; c++) {
+      var text = cellText_(c < line.length ? line[c] : '');
+      if (String(text).trim()) any = true;
+      row.push(text);
+    }
+    if (any) rows.push(row);
+  }
+  return { headers: headers, rows: rows, count: rows.length };
+}
+
+/** 儲存格 → 名單上的字串。日期固定台北時間，與寫入「提交時間」同一種格式。 */
+function cellText_(value) {
+  if (value == null || value === '') return '';
+  if (Object.prototype.toString.call(value) === '[object Date]') {
+    if (isNaN(value.getTime())) return '';
+    return Utilities.formatDate(value, 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss');
+  }
+  if (typeof value === 'number') {
+    if (!isFinite(value)) return '';
+    if (Math.abs(value - Math.round(value)) < 1e-9) return String(Math.round(value));
+    return String(value);
+  }
+  if (typeof value === 'object') {
+    try {
+      var shown = String(value);
+      if (shown && shown !== '[object Object]') return shown;
+    } catch (e) { /* 無法轉字串就留白 */ }
+    return '';
+  }
+  return String(value);
+}
+
+function requestParam_(e, name) {
+  try {
+    if (!e || !e.parameter || e.parameter[name] == null) return '';
+    return String(e.parameter[name]).trim();
+  } catch (err) {
+    return '';
+  }
+}
+
+/** JSONP 函式名。不合法則當一般 JSON，避免把查詢字串接進腳本。 */
+function safeCallback_(name) {
+  if (!name) return '';
+  if (!/^[A-Za-z_$][A-Za-z0-9_$]{0,80}$/.test(name)) return '';
+  return name;
+}
+
+function jsonpOrJson_(e, obj) {
+  var cb = safeCallback_(requestParam_(e, 'callback'));
+  if (!cb) return json_(obj);
+  return ContentService.createTextOutput(cb + '(' + JSON.stringify(obj) + ');')
+    .setMimeType(ContentService.MimeType.JAVASCRIPT);
 }
 
 function doPost(e) {
