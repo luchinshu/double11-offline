@@ -128,7 +128,7 @@
     if (firstErr) firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
-  // 一律先存 localStorage（店機留底，admin.html 可下載）
+  // 一律先存 localStorage（店機留底；admin.html「本機暫存」可下載還沒同步成功的筆）
   function knownSyncedInvoices() {
     var out = [];
     try {

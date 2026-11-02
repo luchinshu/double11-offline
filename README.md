@@ -14,8 +14,8 @@
 | --- | --- |
 | `index.html` / `style.css` / `app.js` / `config.js` | 抽獎表單（手機優先）：先選門市或線上訂單 |
 | `validate.js` | 驗證／正規化／比對合併的純函式（瀏覽器＋Node 共用） |
-| `admin.html` | 門市管理頁：本機提交紀錄、下載 CSV、清除 |
-| `Code.gs` + `DEPLOY.md` | Google Apps Script Web App：寫入試算表「線下登記」分頁（改版後要重新部署） |
+| `admin.html` | 門市管理頁：上面是試算表「共用名單」（全門市），下面「本機暫存」只留給沒同步成功的 CSV |
+| `Code.gs` + `DEPLOY.md` | Google Apps Script Web App：POST 寫入、GET `?action=list` 讀出試算表「線下登記」（改版後要重新部署） |
 | `merge.py` / `merge.html` | 抽獎日名單合併＋可驗證抽籤（Python 與瀏覽器兩種版本） |
 | `make_qr.py` / `qr_store.png` | 門市 QR 碼產生器與成品 |
 | `test.js` | `node test.js` 跑表單驗證、合併與 Code.gs 驗證 |
@@ -29,12 +29,11 @@
 1. 印出 `qr_store.png`（或依 `make_qr.py` 自訂門市參數後重新產生），放在櫃台。
 2. 客人掃碼 → 填資料 → 勾選個資同意 → 按「送出，帶我去留言！」。
 3. 手機會自動跳轉到活動貼文，**提醒客人一定要留言**；沒留言不算參加。
-4. 店員可開同一網址後面的 `admin.html`（如 `https://…/double11-offline/admin.html`）：
-   - 看本機提交筆數、重複發票筆數；
-   - **打烊前按「下載 CSV」**把檔案交回總部（UTF-8 含 BOM，Excel 直接開）；
-   - 確認下載後再按「清除本機資料」。
-5. 若 QR 碼網址有帶 `?endpoint=`，客人送出時也會同步寫進 Google 試算表
-   「線下登記」分頁（有網路就即時入帳；沒網路至少本機與 CSV 留底）。
+4. 店員開 `admin.html`（如 `https://…/double11-offline/admin.html`，不要印在客人的 QR 上）：
+   - **上面「共用名單」**是 Google 試算表「線下登記」的全門市名單。進頁會自動載入，按「重新整理」更新；有「重複標記」的列會以紅底標出。預設顯示全部門市。
+   - **下面「本機暫存」**只是這台瀏覽器的留底，不是共用名單。客人送出時若畫面說同步失敗，打烊前按「下載本機 CSV」交回總部（UTF-8 含 BOM），確認後再清除。
+5. 若共用名單顯示讀不到：請總部到 Apps Script「部署 → 管理部署 → 鉛筆 → 版本選新版本 → 部署」（見 `DEPLOY.md`）。網址不用改。
+6. 客人送出時會寫進試算表「線下登記」（`config.js` 的 `GAS_ENDPOINT`，或 QR 碼的 `?endpoint=`）。沒網路時至少還有本機暫存。
 
 ## 改貼文連結／換門市
 

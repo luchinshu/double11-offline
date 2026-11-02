@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261029j">
+<link rel="stylesheet" href="style.css?v=20261102a">
 <style>
   .admin-page .card { padding: 22px 18px; }
   .admin-head { display: flex; flex-direction: column; gap: 4px; }
@@ -39,6 +39,19 @@
   .admin-badge { display: inline-block; padding: 3px 14px; border-radius: 999px; border: 1px solid var(--gold); color: var(--gold); font-size: .78rem; letter-spacing: .2em; }
   .btn-ghost { display: inline-flex; align-items: center; justify-content: center; background: transparent; color: var(--wine); border: 1.5px solid var(--gold); text-decoration: none; }
   .btn-ghost:hover { background: rgba(198,161,91,.12); }
+  .section-kicker { display: inline-block; margin: 0 0 6px; padding: 2px 10px; border-radius: 999px; background: var(--wine); color: var(--cream); font-size: .75rem; letter-spacing: .14em; }
+  .section-kicker.local { background: transparent; color: var(--wine); border: 1px solid var(--gold); }
+  .shared-status { font-size: .86rem; margin: 8px 0 0; line-height: 1.65; color: #7a5c64; }
+  .shared-status.is-err { color: #A4231B; }
+  .filter-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
+  .filter-row label { font-size: .85rem; color: #7a5c64; display: flex; align-items: center; gap: 8px; }
+  .store-filter { font: inherit; font-size: .9rem; padding: 8px 12px; border-radius: 10px; border: 1px solid #e2d3bf; background: #fff; color: var(--ink); }
+  .filter-count { font-size: .82rem; color: #7a5c64; }
+  table.admin tbody tr.is-dup td { background: #fdecea; }
+  table.admin tbody tr.is-dup:hover td { background: #f8d9d4; }
+  table.admin td.dup-mark { color: #A4231B; font-weight: 700; }
+  table.admin td .dup-inline { display: block; margin-top: 2px; color: #A4231B; font-weight: 700; font-size: .78rem; letter-spacing: .04em; }
+  .btn:disabled { opacity: .55; cursor: wait; }
   @media (min-width: 900px) {
     .admin-hero { margin: 24px 24px 0; padding: 34px 36px 30px; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 24px; text-align: left; }
     .admin-title { margin: 0; font-size: 1.9rem; }
@@ -69,32 +82,71 @@
   <section class="card">
     <div class="admin-top">
       <div class="admin-head">
-        <h2 class="form-title">本機提交紀錄</h2>
-        <p class="form-hint">存在這台裝置的瀏覽器裡，打烊前記得「下載 CSV」交回總部彙整。</p>
+        <p class="section-kicker">全門市</p>
+        <h2 class="form-title">共用名單</h2>
+        <p class="form-hint">Google 試算表「線下登記」的全部門市。這才是大家一起看的那一份，按「重新整理」更新。</p>
+        <p class="shared-status" id="sharedStatus" role="status">正在讀取共用名單…</p>
       </div>
       <div class="stat">
-        <div class="box"><div class="num" id="statCount">0</div><div class="lbl">提交筆數</div></div>
+        <div class="box"><div class="num" id="sharedCount">–</div><div class="lbl">共用筆數</div></div>
+        <div class="box"><div class="num" id="sharedDup">–</div><div class="lbl">重複標記</div></div>
+      </div>
+    </div>
+
+    <div class="filter-row">
+      <label>顯示門市
+        <select id="storeFilter" class="store-filter">
+          <option value="">全部門市</option>
+        </select>
+      </label>
+      <span class="filter-count" id="filterCount"></span>
+    </div>
+
+    <div class="admin-table-wrap" id="sharedWrap"></div>
+    <p class="empty-note" id="sharedEmpty" style="display:none"></p>
+
+    <div class="admin-actions">
+      <div class="btn-row">
+        <button class="btn btn-gold" id="btnRefresh" type="button">重新整理</button>
+        <a class="btn btn-ghost" href="./index.html">← 回到表單</a>
+      </div>
+    </div>
+
+    <p class="admin-note">
+      ※ 時間照試算表上的台北時間顯示，不會再換算一次。<br>
+      ※ 「重複標記」有字的列會以紅底標出（電話、Email、發票或訂單編號撞到較早的登記）。<br>
+      ※ 預設顯示全部門市。這頁網址不要印在客人的 QR 上。<br>
+      ※ 若一直讀不到：請總部到 Apps Script「部署 → 管理部署 → 鉛筆 → 版本選新版本 → 部署」。網址不用改。
+    </p>
+  </section>
+
+  <section class="card">
+    <div class="admin-top">
+      <div class="admin-head">
+        <p class="section-kicker local">僅此瀏覽器</p>
+        <h2 class="form-title">本機暫存</h2>
+        <p class="form-hint">只有這台裝置的瀏覽器留底，不是共用名單。客人送出時若顯示同步失敗，打烊前下載 CSV 交回總部。</p>
+      </div>
+      <div class="stat">
+        <div class="box"><div class="num" id="statCount">0</div><div class="lbl">本機筆數</div></div>
         <div class="box"><div class="num" id="statDup">0</div><div class="lbl">發票／訂單重複</div></div>
       </div>
     </div>
 
     <div class="admin-table-wrap" id="tableWrap"></div>
-    <p class="empty-note" id="emptyNote">還沒有資料，客人掃碼送出後就會出現在這裡。</p>
+    <p class="empty-note" id="emptyNote">這台裝置還沒有本機留底。</p>
 
     <div class="admin-actions">
       <div class="btn-row">
-        <button class="btn btn-gold" id="btnCsv">下載 CSV（交回總部）</button>
-        <a class="btn btn-ghost" href="./index.html">← 回到表單</a>
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-danger" id="btnClear">清除本機資料</button>
+        <button class="btn btn-gold" id="btnCsv" type="button">下載本機 CSV</button>
+        <button class="btn btn-danger" id="btnClear" type="button">清除本機資料</button>
       </div>
     </div>
 
     <p class="admin-note">
       ※ 下載的 CSV 為 UTF-8（含 BOM），Excel 直接開不會亂碼。<br>
-      ※ 清除前請先確認已下載；清除只刪這台裝置的留底，不影響已送到試算表的資料。<br>
-      ※ 「發票／訂單重複」是用發票號碼、訂單編號在這台裝置上粗略比對，正式去重由總部統一處理。
+      ※ 清除前請先確認已下載；清除只刪這台裝置的留底，不影響試算表。<br>
+      ※ 這裡的「發票／訂單重複」只比對這台裝置，跟上面的「重複標記」不是同一套。
     </p>
   </section>
 
@@ -102,14 +154,257 @@
 </div>
 </div>
 
-<script src="validate.js?v=20261029j"></script>
+<script src="validate.js?v=20261102a"></script>
+<script src="config.js?v=20261102a"></script>
 <script>
 (function () {
   'use strict';
   var V = window.LotteryValidate;
   var LS_KEY = 'double11_offline_entries';
-  // 與 Code.gs「線下登記」分頁相同的欄位順序（不含伺服器的重複標記）
+  // 本機暫存沒有伺服器才寫得進去的「重複標記」。共用名單的欄位以試算表回傳的表頭為準。
   var HEADERS = ['提交時間', '姓名', 'Email', '電話', '消費金額', '平台', '帳號名稱', '發票號碼', '行銷同意', '門市', '來源', '通路類型', '購買通路', '訂單編號'];
+  var shared = { headers: [], rows: [], updatedAt: '' };
+  var loadSeq = 0;
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function endpoint() {
+    var base = (window.LOTTERY_CONFIG) || {};
+    var params = V.parseQueryString(location.search || '');
+    var cfg = V.resolveConfig(base, params);
+    return String(cfg.GAS_ENDPOINT || '').trim();
+  }
+
+  function listUrl(base, extra) {
+    var join = base.indexOf('?') >= 0 ? '&' : '?';
+    return base + join + 'action=list&ts=' + Date.now() + (extra || '');
+  }
+
+  function parseGasJson(text) {
+    var t = String(text || '').replace(/^\uFEFF/, '').trim();
+    if (!t || t.charAt(0) !== '{') return null;
+    try { return JSON.parse(t); } catch (e) { return null; }
+  }
+
+  function headerIndex(headers, name) {
+    for (var i = 0; i < headers.length; i++) if (headers[i] === name) return i;
+    return -1;
+  }
+
+  function setSharedStatus(text, isErr) {
+    var el = document.getElementById('sharedStatus');
+    el.textContent = text;
+    el.className = 'shared-status' + (isErr ? ' is-err' : '');
+  }
+
+  function fillStoreFilter() {
+    var sel = document.getElementById('storeFilter');
+    var prev = sel.value;
+    var storeI = headerIndex(shared.headers, '門市');
+    var names = [];
+    var seen = {};
+    var hasEmpty = false;
+    (shared.rows || []).forEach(function (row) {
+      var store = storeI >= 0 ? String(row[storeI] || '').trim() : '';
+      if (!store) { hasEmpty = true; return; }
+      if (!seen[store]) { seen[store] = 1; names.push(store); }
+    });
+    names.sort();
+    var html = '<option value="">全部門市</option>';
+    names.forEach(function (name) {
+      html += '<option value="' + esc(name) + '">' + esc(name) + '</option>';
+    });
+    if (hasEmpty) html += '<option value="__EMPTY__">未填門市（含線上）</option>';
+    sel.innerHTML = html;
+    var keep = false;
+    for (var i = 0; i < sel.options.length; i++) if (sel.options[i].value === prev) keep = true;
+    sel.value = keep ? prev : '';
+  }
+
+  function renderShared() {
+    var headers = shared.headers || [];
+    var rows = shared.rows || [];
+    var wrap = document.getElementById('sharedWrap');
+    var empty = document.getElementById('sharedEmpty');
+    var dupI = headerIndex(headers, '重複標記');
+    var storeI = headerIndex(headers, '門市');
+    var dupN = 0;
+    rows.forEach(function (row) {
+      if (dupI >= 0 && String(row[dupI] || '').trim()) dupN++;
+    });
+    document.getElementById('sharedCount').textContent = String(rows.length);
+    document.getElementById('sharedDup').textContent = String(dupN);
+
+    var filter = document.getElementById('storeFilter').value;
+    var shown = rows.filter(function (row) {
+      if (!filter) return true;
+      var store = storeI >= 0 ? String(row[storeI] || '').trim() : '';
+      if (filter === '__EMPTY__') return !store;
+      return store === filter;
+    });
+    var filterCount = document.getElementById('filterCount');
+    filterCount.textContent = rows.length
+      ? ('顯示 ' + shown.length + ' / ' + rows.length + ' 筆')
+      : '';
+
+    if (!shown.length) {
+      wrap.innerHTML = '';
+      empty.style.display = 'block';
+      empty.textContent = rows.length ? '這個門市篩選下沒有資料。' : '共用名單還沒有資料。';
+      return;
+    }
+    empty.style.display = 'none';
+    var view = shown.slice().reverse();
+    var html = '<table class="admin"><thead><tr>';
+    headers.forEach(function (h) { html += '<th>' + esc(h) + '</th>'; });
+    html += '</tr></thead><tbody>';
+    var nameI = headerIndex(headers, '姓名');
+    view.forEach(function (row) {
+      var markText = dupI >= 0 ? String(row[dupI] || '').trim() : '';
+      var marked = !!markText;
+      html += '<tr' + (marked ? ' class="is-dup"' : '') + '>';
+      for (var c = 0; c < headers.length; c++) {
+        var cls = (marked && c === dupI) ? ' class="dup-mark"' : '';
+        var cell = c < row.length ? row[c] : '';
+        var badge = (marked && c === (nameI >= 0 ? nameI : 0))
+          ? '<span class="dup-inline">' + esc(markText) + '</span>' : '';
+        html += '<td' + cls + '>' + esc(cell) + badge + '</td>';
+      }
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+  }
+
+  function applyRoster(data) {
+    shared.headers = Array.isArray(data.headers) ? data.headers.map(function (h) { return String(h == null ? '' : h); }) : [];
+    shared.rows = Array.isArray(data.rows) ? data.rows.map(function (row) {
+      return Array.isArray(row) ? row.map(function (cell) { return cell == null ? '' : String(cell); }) : [];
+    }) : [];
+    shared.updatedAt = data.updatedAt ? String(data.updatedAt) : '';
+    fillStoreFilter();
+    renderShared();
+    var when = shared.updatedAt ? ('已更新 ' + shared.updatedAt + '（台北時間）。') : '已更新。';
+    setSharedStatus(when + ' 時間欄照試算表顯示；有重複標記的列已用紅底標出。', false);
+  }
+
+  function loadSharedJsonp(base) {
+    return new Promise(function (resolve, reject) {
+      var cb = 'rosterCb_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
+      var script = document.createElement('script');
+      var timer = setTimeout(function () {
+        cleanup();
+        reject(new Error('timeout'));
+      }, 25000);
+      function cleanup() {
+        clearTimeout(timer);
+        try { delete window[cb]; } catch (e) { window[cb] = undefined; }
+        if (script.parentNode) script.parentNode.removeChild(script);
+      }
+      window[cb] = function (data) {
+        cleanup();
+        resolve(data);
+      };
+      script.onerror = function () {
+        cleanup();
+        reject(new Error('jsonp'));
+      };
+      // 舊版 Web App 只回文字 ok，腳本載入後不會呼叫 callback。
+      script.onload = function () {
+        setTimeout(function () {
+          if (window[cb]) {
+            cleanup();
+            reject(new Error('legacy'));
+          }
+        }, 400);
+      };
+      script.src = listUrl(base, '&callback=' + encodeURIComponent(cb));
+      document.head.appendChild(script);
+    });
+  }
+
+  function loadSharedFetch(base) {
+    var opts = { method: 'GET', mode: 'cors', redirect: 'follow', cache: 'no-store' };
+    var clearTimer = function () {};
+    if (typeof AbortController === 'function') {
+      var ac = new AbortController();
+      opts.signal = ac.signal;
+      var timer = setTimeout(function () { ac.abort(); }, 20000);
+      clearTimer = function () { clearTimeout(timer); };
+    }
+    return fetch(listUrl(base), opts).then(function (res) {
+      clearTimer();
+      return res.text();
+    }, function (err) {
+      clearTimer();
+      throw err;
+    }).then(function (text) {
+      var trimmed = String(text || '').replace(/^\uFEFF/, '').trim();
+      if (trimmed === 'ok') {
+        var legacy = new Error('legacy');
+        legacy.legacy = true;
+        throw legacy;
+      }
+      var data = parseGasJson(trimmed);
+      if (data && (data.ok === true || data.ok === false)) return data;
+      throw new Error('not-json');
+    });
+  }
+
+  function loadShared() {
+    var seq = ++loadSeq;
+    var base = endpoint();
+    var btn = document.getElementById('btnRefresh');
+    if (!base) {
+      setSharedStatus('還沒設定試算表網址。請確認 config.js 的 GAS_ENDPOINT，或在網址加上 ?endpoint=。', true);
+      document.getElementById('sharedEmpty').style.display = 'block';
+      document.getElementById('sharedEmpty').textContent = '無法讀取共用名單。';
+      return;
+    }
+    btn.disabled = true;
+    setSharedStatus('正在讀取共用名單…', false);
+    var finish = function () { if (seq === loadSeq) btn.disabled = false; };
+    var fail = function () {
+      if (seq !== loadSeq) return;
+      finish();
+      setSharedStatus('讀不到共用名單。請確認網路，並請總部到 Apps Script「部署 → 管理部署 → 鉛筆 → 版本選新版本 → 部署」後再按重新整理。網址不用改。', true);
+      if (!shared.rows.length) {
+        document.getElementById('sharedWrap').innerHTML = '';
+        document.getElementById('sharedEmpty').style.display = 'block';
+        document.getElementById('sharedEmpty').textContent = '目前沒有讀到共用名單。';
+      }
+    };
+    var accept = function (data) {
+      if (seq !== loadSeq) return;
+      finish();
+      if (!data || data.ok !== true || !Array.isArray(data.headers) || !Array.isArray(data.rows)) {
+        var msg = data && Array.isArray(data.errors) && data.errors.length ? data.errors.join(' ') : '';
+        if (msg) {
+          setSharedStatus(msg, true);
+          return;
+        }
+        fail();
+        return;
+      }
+      applyRoster(data);
+    };
+    if (typeof fetch !== 'function') {
+      loadSharedJsonp(base).then(accept, fail);
+      return;
+    }
+    loadSharedFetch(base).then(accept, function (err) {
+      if (seq !== loadSeq) return;
+      // 讀得到「ok」代表還是舊版 Web App，改走 JSONP 也不會有名單。
+      if (err && err.legacy) { fail(); return; }
+      loadSharedJsonp(base).then(accept, fail);
+    });
+  }
 
   function channelLabel(e) {
     if (e.channel === 'online' || e.source === 'online-web') return '線上';
@@ -137,8 +432,23 @@
   function fmtTs(iso) {
     var d = new Date(iso);
     if (isNaN(d)) return iso;
-    var p = function (n) { return (n < 10 ? '0' : '') + n; };
-    return d.getFullYear() + '/' + p(d.getMonth() + 1) + '/' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+    try {
+      var parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Taipei',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hourCycle: 'h23'
+      }).formatToParts(d);
+      var g = function (type) {
+        for (var i = 0; i < parts.length; i++) if (parts[i].type === type) return parts[i].value;
+        return '';
+      };
+      var hour = g('hour') === '24' ? '00' : g('hour');
+      return g('year') + '/' + g('month') + '/' + g('day') + ' ' + hour + ':' + g('minute') + ':' + g('second');
+    } catch (e) {
+      var p = function (n) { return (n < 10 ? '0' : '') + n; };
+      return d.getFullYear() + '/' + p(d.getMonth() + 1) + '/' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+    }
   }
 
   function render() {
@@ -161,10 +471,10 @@
     if (!entries.length) { wrap.innerHTML = ''; empty.style.display = 'block'; return; }
     empty.style.display = 'none';
 
-    var html = '<table class="admin"><thead><tr>' + HEADERS.map(function (h) { return '<th>' + h + '</th>'; }).join('') + '</tr></thead><tbody>';
+    var html = '<table class="admin"><thead><tr>' + HEADERS.map(function (h) { return '<th>' + esc(h) + '</th>'; }).join('') + '</tr></thead><tbody>';
     entries.slice().reverse().forEach(function (e) {
       var row = rowOf(e);
-      html += '<tr>' + row.map(function (c) { return '<td>' + String(c).replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</td>'; }).join('') + '</tr>';
+      html += '<tr>' + row.map(function (c) { return '<td>' + esc(c) + '</td>'; }).join('') + '</tr>';
     });
     html += '</tbody></table>';
     wrap.innerHTML = html;
@@ -199,7 +509,11 @@
     }
   });
 
+  document.getElementById('btnRefresh').addEventListener('click', loadShared);
+  document.getElementById('storeFilter').addEventListener('change', renderShared);
+
   render();
+  loadShared();
 })();
 </script>
 </body>
