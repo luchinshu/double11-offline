@@ -11,10 +11,14 @@
 <!-- assets 20261030f: channel is locked after the gate; no in-form switch -->
 <!-- assets 20261030g: 試算表回 ok 才顯示登記成功 -->
 <!-- assets 20261103c: FB/IG in-app browser uses tap-to-open, no auto location.href -->
-<link rel="stylesheet" href="style.css?v=20261030j">
+<link rel="stylesheet" href="style.css?v=20261125a">
 <script>
-/* 有 ?channel= 時先標記，避免掃碼深連結先閃過選擇畫面。別名與 validate.js resolveChannel 一致。 */
+/* 截止後先標 registration-closed，避免表單或管道選擇閃過。有 ?channel= 時先標記，避免掃碼深連結先閃過選擇畫面。別名與 validate.js resolveChannel 一致。 */
 (function () {
+  if (Date.now() >= new Date('2026-11-30T23:59:00+08:00').getTime()) {
+    document.documentElement.classList.add('registration-closed');
+    return;
+  }
   var q = location.search.charAt(0) === '?' ? location.search.slice(1) : location.search;
   if (!q) return;
   var raw = '';
@@ -41,6 +45,13 @@
 <body>
 
 <div class="page">
+
+  <section class="gate closed-notice" id="closedNotice" aria-live="polite" aria-label="活動截止登記">
+    <div class="gate-logo" aria-hidden="true">
+      <img src="assets/hero-promo.jpg?v=20261029e" alt="">
+    </div>
+    <h1 class="closed-title">活動截止登記</h1>
+  </section>
 
   <section class="gate" id="channelGate" aria-label="選擇購買管道">
     <h1 class="sr-only">盧琴樹 LUCHINSHU 雙11抽獎登記</h1>
@@ -261,8 +272,8 @@
   </div>
 </div>
 
-<script src="validate.js?v=20261103c"></script>
+<script src="validate.js?v=20261125a"></script>
 <script src="config.js?v=20261103c"></script>
-<script src="app.js?v=20261103c"></script>
+<script src="app.js?v=20261125a"></script>
 </body>
 </html>

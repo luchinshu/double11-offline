@@ -67,6 +67,18 @@ t('電話正規化：手機都收成 8869xxxxxxxx', () => {
   assert.strictEqual(V.normalizePhone('912345678'), '886912345678'); // 舊名單 9 碼仍折 886，但驗證不通過
 });
 
+console.log('validate.js：登記截止時間');
+t('截止瞬間與之後關閉，前一秒仍開放；現在尚未截止', () => {
+  const deadline = V.registrationDeadline();
+  assert.strictEqual(deadline.toISOString(), '2026-11-30T15:59:00.000Z');
+  assert.strictEqual(V.isRegistrationClosed(new Date('2026-11-30T23:58:59+08:00')), false);
+  assert.strictEqual(V.isRegistrationClosed(new Date('2026-11-30T23:59:00+08:00')), true);
+  assert.strictEqual(V.isRegistrationClosed(new Date('2026-11-30T15:59:00Z')), true);
+  assert.strictEqual(V.isRegistrationClosed(new Date('2026-12-01T00:00:00+08:00')), true);
+  assert.strictEqual(V.isRegistrationClosed(new Date('2026-11-25T12:00:00+08:00')), false);
+  assert.strictEqual(V.isRegistrationClosed(), false);
+});
+
 console.log('validate.js：帳號正規化');
 t('去 @、全形＠、空白、小寫', () => {
   assert.strictEqual(V.normalizeAccount('＠Chen_DaWen'), 'chen_dawen');
@@ -612,12 +624,60 @@ t('登記頁成功按鈕不預先指到 #，腳本版號已更新', () => {
   assert.ok(html.indexOf('id="goPostBtn"') >= 0);
   assert.ok(html.indexOf('goPostBtn" href="#"') < 0);
   assert.ok(html.indexOf('href="#" target="_blank" rel="noopener">馬上去貼文留言') < 0);
-  assert.ok(html.indexOf('app.js?v=20261103c') >= 0);
-  assert.ok(html.indexOf('validate.js?v=20261103c') >= 0);
+  assert.ok(html.indexOf('app.js?v=20261125a') >= 0);
+  assert.ok(html.indexOf('validate.js?v=20261125a') >= 0);
+  assert.ok(html.indexOf('style.css?v=20261125a') >= 0);
   assert.ok(html.indexOf('config.js?v=20261103c') >= 0);
   const app = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
   assert.ok(app.indexOf('postOpenPlan') >= 0);
   assert.ok(app.indexOf('if (plan.auto && V.isRealPostUrl(href)) window.location.href = href;') >= 0);
+});
+t('登記頁截止後顯示活動截止登記，管理頁不受影響，正式環境沒有重開表單的後門', () => {
+  const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, 'style.css'), 'utf8');
+  const app = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
+  const admin = fs.readFileSync(path.join(__dirname, 'admin.html'), 'utf8');
+  assert.ok(html.indexOf('id="closedNotice"') >= 0);
+  assert.ok(html.indexOf('活動截止登記') >= 0);
+  assert.ok(html.indexOf("new Date('2026-11-30T23:59:00+08:00')") >= 0);
+  assert.ok(html.indexOf("classList.add('registration-closed')") >= 0);
+  assert.ok(css.indexOf('html.registration-closed #channelGate') >= 0);
+  assert.ok(css.indexOf('html.registration-closed #campaign') >= 0);
+  assert.ok(css.indexOf('html.registration-closed #closedNotice') >= 0);
+  assert.ok(app.indexOf('armDeadlineClose') >= 0);
+  assert.ok(app.indexOf('V.isRegistrationClosed()') >= 0);
+  assert.ok(app.indexOf('showClosedState') >= 0);
+  // 查詢參數不可用來重開表單
+  assert.ok(!/searchParams|location\.search.*bypass|\\?open=|forceOpen|skipDeadline|ignoreDeadline/.test(html + app));
+  assert.ok(admin.indexOf('registration-closed') < 0);
+  assert.ok(admin.indexOf('isRegistrationClosed') < 0);
+  assert.ok(admin.indexOf('活動截止登記') < 0);
+  // 用假時間模擬截止邏輯（不改正式程式後門）
+  const closedNow = new Date('2026-11-30T23:59:00+08:00');
+  const openNow = new Date('2026-11-30T23:58:59+08:00');
+  assert.strictEqual(V.isRegistrationClosed(closedNow), true);
+  assert.strictEqual(V.isRegistrationClosed(openNow), false);
+});
+t('截止後 doPost 拒收且不寫入；list / doGet 仍可讀', () => {
+  const realNow = gas.now_;
+  const writes = installGasSheet([ROSTER_HEADERS]);
+  gas.now_ = function () { return new Date('2026-11-30T15:58:59Z'); };
+  assert.strictEqual(gas.isRegistrationClosed_(), false);
+  gas.now_ = function () { return new Date('2026-11-30T15:59:00Z'); };
+  assert.strictEqual(gas.isRegistrationClosed_(), true);
+  assert.strictEqual(gas.isRegistrationClosed_(new Date('2026-11-30T23:58:59+08:00')), false);
+  assert.strictEqual(gas.isRegistrationClosed_(new Date('2026-11-30T23:59:00+08:00')), true);
+  const res = gas.doPost({ postData: { contents: JSON.stringify(Object.assign({}, basePerson, {
+    channel: 'store', invoice: 'AB12345678', source: 'offline-web'
+  })) } });
+  const data = JSON.parse(res.getContent());
+  assert.strictEqual(data.ok, false);
+  assert.deepStrictEqual(data.errors, ['活動截止登記']);
+  assert.deepStrictEqual(writes, []);
+  const listed = JSON.parse(gas.doGet({ parameter: { action: 'list', ts: '1' } }).getContent());
+  assert.strictEqual(listed.ok, true);
+  assert.strictEqual(gas.doGet().getContent(), 'ok');
+  gas.now_ = realNow;
 });
 
 console.log(process.exitCode ? '\n有測試失敗' : '\n全部 ' + passed + ' 項測試通過 ✓');

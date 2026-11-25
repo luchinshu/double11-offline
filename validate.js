@@ -21,6 +21,16 @@
   var ACCOUNT_URL_PREFIX_RE =
     /^(?:https?:\/\/)?(?:(?:www|m|mobile)\.)?(?:instagram\.com|instagr\.am|facebook\.com|fb\.com|fb\.me)\//i;
 
+  // 登記截止：2026-11-30 23:59:00 台北時間（含該秒起不再受理）
+  var REGISTRATION_DEADLINE = new Date('2026-11-30T23:59:00+08:00');
+  function registrationDeadline() {
+    return new Date(REGISTRATION_DEADLINE.getTime());
+  }
+  function isRegistrationClosed(now) {
+    var t = now == null ? Date.now() : (now instanceof Date ? now.getTime() : new Date(now).getTime());
+    return t >= REGISTRATION_DEADLINE.getTime();
+  }
+
   function str(v) { return v == null ? '' : String(v); }
   function trim(v) { return str(v).trim(); }
 
@@ -471,6 +481,9 @@
     dedupeMerge: dedupeMerge,
     buildEntryId: buildEntryId,
     sha256Hex: sha256Hex,
-    rankDraw: rankDraw
+    rankDraw: rankDraw,
+    REGISTRATION_DEADLINE: REGISTRATION_DEADLINE,
+    registrationDeadline: registrationDeadline,
+    isRegistrationClosed: isRegistrationClosed
   };
 });
