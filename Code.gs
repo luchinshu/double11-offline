@@ -32,6 +32,16 @@
  */
 
 var SHEET_NAME = '線下登記';
+// 登記截止：2026-11-30 23:59:00 Asia/Taipei（含該秒起 doPost 拒收；既有名單不刪）。
+var REGISTRATION_DEADLINE_TAIPEI = '2026/11/30 23:59:00';
+function now_() {
+  return new Date();
+}
+function isRegistrationClosed_(when) {
+  var stamp = Utilities.formatDate(when || now_(), 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss');
+  return stamp >= REGISTRATION_DEADLINE_TAIPEI;
+}
+
 var HARDCODED_SHEET_ID = '1xFeTyFWZh_8bd2GVP0-G28TJBrl1vGrmXHuwI0HWe7M';
 // 既有欄位順序不動；新欄位接在後面，避免洗掉已寫入的列。
 var HEADERS = ['提交時間', '姓名', 'Email', '電話', '消費金額', '平台', '帳號名稱', '發票號碼', '行銷同意', '門市', '來源', '重複標記', '通路類型', '購買通路', '訂單編號'];
@@ -164,6 +174,9 @@ function jsonpOrJson_(e, obj) {
 
 function doPost(e) {
   try {
+    if (isRegistrationClosed_()) {
+      return json_({ ok: false, errors: ['活動截止登記'] });
+    }
     var data = JSON.parse(e.postData.contents || '{}');
     var errors = validate_(data);
     if (errors.length) {

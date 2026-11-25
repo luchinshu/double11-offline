@@ -831,6 +831,22 @@ html.channel-open #campaign { display: block; }
 html.channel-preset .gate,
 html.channel-open .gate { display: none; }
 
+#closedNotice { display: none; }
+html.registration-closed #channelGate,
+html.registration-closed #campaign { display: none !important; }
+html.registration-closed #closedNotice {
+  display: flex;
+}
+.closed-title {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1.85rem;
+  letter-spacing: .22em;
+  color: var(--wine);
+  text-shadow: 0 2px 0 rgba(227, 200, 146, .55), 0 6px 18px rgba(92, 35, 49, .18);
+}
+
 .gate-logo {
   width: min(78vw, 300px);
   aspect-ratio: 400 / 120;
@@ -908,7 +924,8 @@ html.channel-open .gate { display: none; }
 #formCard { scroll-margin-top: 12px; }
 
 @media (min-width: 900px) {
-  html:not(.channel-open):not(.channel-preset) .page {
+  html:not(.channel-open):not(.channel-preset):not(.registration-closed) .page,
+  html.registration-closed .page {
     margin: 0 auto;
     min-height: 100dvh;
     border-radius: 0;

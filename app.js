@@ -31,6 +31,27 @@
   var orderIdField = document.getElementById('orderIdField');
   var channelValue = document.getElementById('channelValue');
 
+  function showClosedState() {
+    document.documentElement.classList.add('registration-closed');
+    document.documentElement.classList.remove('channel-open');
+    document.documentElement.classList.remove('channel-preset');
+    if (submitBtn) submitBtn.disabled = true;
+  }
+  function armDeadlineClose() {
+    if (V.isRegistrationClosed()) {
+      showClosedState();
+      return;
+    }
+    var delay = V.registrationDeadline().getTime() - Date.now();
+    if (delay > 2147483647) delay = 2147483647;
+    if (delay < 0) delay = 0;
+    setTimeout(function () {
+      if (V.isRegistrationClosed()) showClosedState();
+      else armDeadlineClose();
+    }, delay);
+  }
+  armDeadlineClose();
+
   function fieldValue(id) { return document.getElementById(id).value; }
   function checkedValue(name) {
     var el = form.querySelector('input[name="' + name + '"]:checked');
@@ -65,6 +86,7 @@
   }
 
   function revealCampaign(ch, scrollToForm) {
+    if (V.isRegistrationClosed()) { showClosedState(); return; }
     setChannel(ch);
     document.documentElement.classList.add('channel-open');
     if (!scrollToForm) return;
@@ -286,6 +308,10 @@
 
   form.addEventListener('submit', function (ev) {
     ev.preventDefault();
+    if (V.isRegistrationClosed()) {
+      showClosedState();
+      return;
+    }
     clearErrors();
     var data = readForm();
     var result = V.validateForm(data, { invoices: knownSyncedInvoices() });
